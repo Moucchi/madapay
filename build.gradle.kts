@@ -7,7 +7,7 @@ plugins {
 
 group = "com.moucchi"
 version = "0.0.1-SNAPSHOT"
-description = "madapay-RAFIDINJANAHARY-Emmanuel"
+description = "madapay-RAFIDINJANAHARY_Emmanuel"
 
 java {
 	toolchain {

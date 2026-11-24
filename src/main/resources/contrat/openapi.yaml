@@ -1,0 +1,955 @@
+openapi: 3.1.0
+
+info:
+  title: MadaPay API
+  version: 1.0.0
+  summary: API de mobile money fictive, fil rouge du cours Web services REST (M2).
+  description: |
+    MadaPay est une API de mobile money **fictive** utilisée comme fil rouge du cours.
+    Le même contrat est implémenté en Node.js, Spring Boot et FastAPI.
+
+    ## Règles métier communes
+
+    - Montants en **Ariary (Ar), entiers** (pas de décimales).
+    - Montant minimal d'un transfert : **100 Ar**.
+    - Plafond de transferts **sortants par compte et par jour** : **2 000 000 Ar**.
+    - Frais de transfert :
+      - 0 Ar si le montant est inférieur ou égal à 1 000 Ar ;
+      - sinon 1,5 % du montant, arrondi à l'Ar supérieur, avec un minimum de 50 Ar.
+    - Le plafond journalier porte sur la **somme des montants** (frais exclus) des transferts
+      créés dans la journée, pour un même compte source. Un transfert qui porterait le cumul
+      au-dessus du plafond est refusé (422, `PLAFOND_DEPASSE`) ; atteindre exactement le plafond est permis.
+    - Le compte source est débité de `montant + frais` dès la création du transfert.
+      Seul le compte source est modélisé : le crédit du destinataire est hors périmètre.
+    - Un transfert est créé au statut `EN_ATTENTE`, et reste annulable pendant **60 secondes**.
+      Passé ce délai, il devient `REUSSIE` (statut déduit à la lecture).
+    - Numéros de téléphone : format national à 10 chiffres, préfixes 032, 033, 034 ou 038.
+    - Statuts d'un transfert : `EN_ATTENTE`, `REUSSIE`, `ECHOUEE`, `ANNULEE`.
+    - Annulation possible uniquement tant que le transfert est `EN_ATTENTE`.
+
+    ## Rôles
+
+    | Rôle | Droits |
+    |---|---|
+    | `CLIENT` | Accède uniquement à ses propres comptes, bénéficiaires et transferts |
+    | `AGENT` | Lit tous les comptes, ne modifie aucun bénéficiaire |
+    | `ADMIN` | Tous les droits |
+
+    ## Conventions
+
+    - Les erreurs suivent le format **RFC 9457** (`application/problem+json`).
+    - Le contrôle de concurrence optimiste utilise `ETag` et `If-Match` (statut 412 en cas de conflit).
+    - La création de transfert exige l'en-tête `Idempotency-Key`.
+    - Les listes sont paginées (`page` à partir de 1, `taille` de 1 à 100, 20 par défaut).
+  contact:
+    name: Équipe pédagogique
+  license:
+    name: Usage pédagogique
+    identifier: CC-BY-NC-4.0
+
+servers:
+  - url: http://localhost:8080
+    description: Environnement local (identique pour les trois stacks)
+
+tags:
+  - name: Authentification
+  - name: Comptes
+  - name: Bénéficiaires
+  - name: Transferts
+  - name: Historique
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/token:
+    post:
+      tags: [Authentification]
+      operationId: obtenirToken
+      summary: Obtenir un jeton d'accès JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdentifiantsConnexion'
+            example:
+              telephone: '0341234567'
+              code_pin: '1234'
+      responses:
+        '200':
+          description: Jeton émis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jeton'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+
+  /comptes:
+    get:
+      tags: [Comptes]
+      operationId: listerComptes
+      summary: Lister les comptes
+      description: |
+        Un `CLIENT` obtient uniquement ses propres comptes.
+        Un `AGENT` ou un `ADMIN` obtient tous les comptes, avec filtre possible par téléphone.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Taille'
+        - name: telephone
+          in: query
+          description: Filtre exact sur le numéro de téléphone du titulaire
+          schema:
+            $ref: '#/components/schemas/Telephone'
+      responses:
+        '200':
+          description: Page de comptes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageComptes'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+
+  /comptes/{compteId}:
+    parameters:
+      - $ref: '#/components/parameters/CompteId'
+    get:
+      tags: [Comptes]
+      operationId: lireCompte
+      summary: Lire un compte
+      responses:
+        '200':
+          description: Compte trouvé
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Compte'
+        '304':
+          description: Non modifié (si `If-None-Match` correspond à l'ETag courant)
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+      parameters:
+        - name: If-None-Match
+          in: header
+          description: ETag déjà détenu par le client, pour une requête conditionnelle
+          schema:
+            type: string
+
+  /comptes/{compteId}/beneficiaires:
+    parameters:
+      - $ref: '#/components/parameters/CompteId'
+    get:
+      tags: [Bénéficiaires]
+      operationId: listerBeneficiaires
+      summary: Lister les bénéficiaires d'un compte
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Taille'
+      responses:
+        '200':
+          description: Page de bénéficiaires
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageBeneficiaires'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    post:
+      tags: [Bénéficiaires]
+      operationId: creerBeneficiaire
+      summary: Ajouter un bénéficiaire
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeneficiaireCreation'
+            example:
+              nom: Rakoto Andry
+              telephone: '0331234567'
+      responses:
+        '201':
+          description: Bénéficiaire créé
+          headers:
+            Location:
+              description: URL du bénéficiaire créé
+              schema:
+                type: string
+                format: uri-reference
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Beneficiaire'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '422':
+          $ref: '#/components/responses/ErreurMetier'
+
+  /comptes/{compteId}/beneficiaires/{beneficiaireId}:
+    parameters:
+      - $ref: '#/components/parameters/CompteId'
+      - $ref: '#/components/parameters/BeneficiaireId'
+    get:
+      tags: [Bénéficiaires]
+      operationId: lireBeneficiaire
+      summary: Lire un bénéficiaire
+      responses:
+        '200':
+          description: Bénéficiaire trouvé
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Beneficiaire'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+    patch:
+      tags: [Bénéficiaires]
+      operationId: modifierBeneficiaire
+      summary: Modifier partiellement un bénéficiaire
+      description: |
+        Mise à jour partielle (`application/merge-patch+json`).
+        Si l'en-tête `If-Match` est fourni, il est vérifié avant la modification (412 en cas d'écart).
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema:
+              $ref: '#/components/schemas/BeneficiaireModification'
+            example:
+              nom: Rakoto Andriamihaja
+      responses:
+        '200':
+          description: Bénéficiaire modifié
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Beneficiaire'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '412':
+          $ref: '#/components/responses/PreconditionEchouee'
+        '422':
+          $ref: '#/components/responses/ErreurMetier'
+    delete:
+      tags: [Bénéficiaires]
+      operationId: supprimerBeneficiaire
+      summary: Supprimer un bénéficiaire
+      responses:
+        '204':
+          description: Bénéficiaire supprimé
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+
+  /transferts:
+    post:
+      tags: [Transferts]
+      operationId: creerTransfert
+      summary: Initier un transfert
+      description: |
+        L'en-tête `Idempotency-Key` est obligatoire.
+
+        - Première requête avec une clé : le transfert est créé (201).
+        - Même clé et même corps : la réponse d'origine est rejouée, sans nouveau débit
+          (statut 200 et en-tête `Idempotency-Replayed: true`).
+        - Même clé mais corps différent : erreur 409.
+        - Solde insuffisant, plafond journalier dépassé ou montant sous le minimum : erreur 422.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Identifiant unique (UUID conseillé) choisi par le client pour cette opération
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 64
+          example: 7b0f6c52-4d0a-4a52-9a2e-3f1c9a1e8d11
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransfertCreation'
+            example:
+              compte_source_id: 3f2a8c1e-5b7d-4e19-9c3a-6d1f0a2b4c11
+              beneficiaire_id: 9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d
+              montant: 25000
+              motif: Achat de riz
+      responses:
+        '200':
+          description: Requête déjà traitée, réponse d'origine rejouée
+          headers:
+            Idempotency-Replayed:
+              description: Vaut `true` quand la réponse est rejouée
+              schema:
+                type: string
+                enum: ['true']
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfert'
+        '201':
+          description: Transfert créé
+          headers:
+            Location:
+              description: URL du transfert créé
+              schema:
+                type: string
+                format: uri-reference
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfert'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '422':
+          $ref: '#/components/responses/ErreurMetier'
+        '429':
+          $ref: '#/components/responses/TropDeRequetes'
+
+  /transferts/{transfertId}:
+    parameters:
+      - $ref: '#/components/parameters/TransfertId'
+    get:
+      tags: [Transferts]
+      operationId: lireTransfert
+      summary: Lire un transfert
+      responses:
+        '200':
+          description: Transfert trouvé
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfert'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+
+  /transferts/{transfertId}/annulation:
+    parameters:
+      - $ref: '#/components/parameters/TransfertId'
+    post:
+      tags: [Transferts]
+      operationId: annulerTransfert
+      summary: Annuler un transfert en attente
+      description: |
+        L'annulation est modélisée comme une ressource (action métier).
+        Elle rembourse le montant et les frais au compte source.
+        Si `If-Match` est fourni, il est vérifié avant l'annulation (412 en cas d'écart).
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnulationDemande'
+      responses:
+        '200':
+          description: Transfert annulé
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfert'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+        '409':
+          $ref: '#/components/responses/Conflit'
+        '412':
+          $ref: '#/components/responses/PreconditionEchouee'
+
+  /comptes/{compteId}/transactions:
+    parameters:
+      - $ref: '#/components/parameters/CompteId'
+    get:
+      tags: [Historique]
+      operationId: listerTransactions
+      summary: Historique des transactions d'un compte
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Taille'
+        - name: statut
+          in: query
+          description: Filtre sur le statut
+          schema:
+            $ref: '#/components/schemas/StatutTransfert'
+        - name: du
+          in: query
+          description: Date de début incluse (format AAAA-MM-JJ)
+          schema:
+            type: string
+            format: date
+        - name: au
+          in: query
+          description: Date de fin incluse (format AAAA-MM-JJ)
+          schema:
+            type: string
+            format: date
+        - name: tri
+          in: query
+          description: Champ de tri, préfixé par `-` pour l'ordre décroissant
+          schema:
+            type: string
+            enum: [date, -date, montant, -montant]
+            default: -date
+      responses:
+        '200':
+          description: Page de transactions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageTransactions'
+        '400':
+          $ref: '#/components/responses/RequeteInvalide'
+        '401':
+          $ref: '#/components/responses/NonAuthentifie'
+        '403':
+          $ref: '#/components/responses/Interdit'
+        '404':
+          $ref: '#/components/responses/Introuvable'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Jeton obtenu par `POST /auth/token`
+
+  parameters:
+    CompteId:
+      name: compteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    BeneficiaireId:
+      name: beneficiaireId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TransfertId:
+      name: transfertId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      description: Numéro de page, à partir de 1
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Taille:
+      name: taille
+      in: query
+      description: Nombre d'éléments par page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: ETag attendu de la ressource, pour le contrôle de concurrence optimiste
+      schema:
+        type: string
+
+  headers:
+    ETag:
+      description: Version de la ressource (validateur fort ou faible)
+      schema:
+        type: string
+      example: '"v3"'
+
+  responses:
+    RequeteInvalide:
+      description: Requête mal formée ou champs invalides
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/validation
+            title: Requête invalide
+            status: 400
+            detail: Un ou plusieurs champs sont invalides.
+            code: VALIDATION
+            erreurs:
+              - champ: telephone
+                message: Le numéro doit comporter 10 chiffres et commencer par 032, 033, 034 ou 038.
+    NonAuthentifie:
+      description: Jeton absent, invalide ou expiré
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/non-authentifie
+            title: Non authentifié
+            status: 401
+            code: NON_AUTHENTIFIE
+    Interdit:
+      description: Rôle ou propriétaire insuffisant pour cette opération
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/interdit
+            title: Accès interdit
+            status: 403
+            code: INTERDIT
+    Introuvable:
+      description: Ressource inexistante
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/introuvable
+            title: Ressource introuvable
+            status: 404
+            code: INTROUVABLE
+    Conflit:
+      description: Conflit avec l'état actuel de la ressource ou de l'opération
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/conflit
+            title: Conflit
+            status: 409
+            detail: La clé d'idempotence a déjà servi avec un corps différent.
+            code: IDEMPOTENCE_CONFLIT
+    PreconditionEchouee:
+      description: L'en-tête `If-Match` ne correspond pas à la version courante
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/precondition
+            title: Précondition échouée
+            status: 412
+            code: VERSION_OBSOLETE
+    ErreurMetier:
+      description: Requête valide mais refusée par une règle métier
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/solde-insuffisant
+            title: Solde insuffisant
+            status: 422
+            detail: Le solde (10 000 Ar) ne couvre pas le montant et les frais (25 375 Ar).
+            code: SOLDE_INSUFFISANT
+    TropDeRequetes:
+      description: Limite de débit dépassée
+      headers:
+        Retry-After:
+          description: Délai d'attente conseillé, en secondes
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Probleme'
+          example:
+            type: https://madapay.example/erreurs/limite-debit
+            title: Trop de requêtes
+            status: 429
+            code: LIMITE_DEBIT
+
+  schemas:
+    Telephone:
+      type: string
+      pattern: '^03[2348][0-9]{7}$'
+      description: Numéro national à 10 chiffres (préfixes 032, 033, 034, 038)
+      example: '0341234567'
+
+    Montant:
+      type: integer
+      minimum: 0
+      description: Montant en Ariary, sans décimales
+      example: 25000
+
+    StatutTransfert:
+      type: string
+      enum: [EN_ATTENTE, REUSSIE, ECHOUEE, ANNULEE]
+
+    Role:
+      type: string
+      enum: [CLIENT, AGENT, ADMIN]
+
+    IdentifiantsConnexion:
+      type: object
+      required: [telephone, code_pin]
+      additionalProperties: false
+      properties:
+        telephone:
+          $ref: '#/components/schemas/Telephone'
+        code_pin:
+          type: string
+          pattern: '^[0-9]{4}$'
+          writeOnly: true
+
+    Jeton:
+      type: object
+      required: [access_token, token_type, expires_in, role]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          description: Durée de validité en secondes
+          example: 3600
+        role:
+          $ref: '#/components/schemas/Role'
+
+    Compte:
+      type: object
+      required: [id, telephone, titulaire, solde, plafond_journalier, cree_le]
+      properties:
+        id:
+          type: string
+          format: uuid
+        telephone:
+          $ref: '#/components/schemas/Telephone'
+        titulaire:
+          type: string
+          example: Rasoa Ravelo
+        solde:
+          $ref: '#/components/schemas/Montant'
+        plafond_journalier:
+          $ref: '#/components/schemas/Montant'
+        cree_le:
+          type: string
+          format: date-time
+
+    Beneficiaire:
+      type: object
+      required: [id, compte_id, nom, telephone, cree_le]
+      properties:
+        id:
+          type: string
+          format: uuid
+        compte_id:
+          type: string
+          format: uuid
+        nom:
+          type: string
+          minLength: 2
+          maxLength: 80
+        telephone:
+          $ref: '#/components/schemas/Telephone'
+        cree_le:
+          type: string
+          format: date-time
+
+    BeneficiaireCreation:
+      type: object
+      required: [nom, telephone]
+      additionalProperties: false
+      properties:
+        nom:
+          type: string
+          minLength: 2
+          maxLength: 80
+        telephone:
+          $ref: '#/components/schemas/Telephone'
+
+    BeneficiaireModification:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        nom:
+          type: string
+          minLength: 2
+          maxLength: 80
+        telephone:
+          $ref: '#/components/schemas/Telephone'
+
+    TransfertCreation:
+      type: object
+      required: [compte_source_id, beneficiaire_id, montant]
+      additionalProperties: false
+      properties:
+        compte_source_id:
+          type: string
+          format: uuid
+        beneficiaire_id:
+          type: string
+          format: uuid
+        montant:
+          type: integer
+          minimum: 1
+          description: |
+            Montant à transmettre au destinataire, en Ariary (entier strictement positif).
+            Le minimum métier de 100 Ar est contrôlé par une règle : sous ce seuil,
+            la réponse est 422 (`MONTANT_TROP_FAIBLE`), et non 400.
+        motif:
+          type: string
+          maxLength: 140
+
+    Transfert:
+      type: object
+      required: [id, compte_source_id, beneficiaire_id, montant, frais, total_debite, statut, cree_le]
+      properties:
+        id:
+          type: string
+          format: uuid
+        compte_source_id:
+          type: string
+          format: uuid
+        beneficiaire_id:
+          type: string
+          format: uuid
+        montant:
+          $ref: '#/components/schemas/Montant'
+        frais:
+          $ref: '#/components/schemas/Montant'
+        total_debite:
+          $ref: '#/components/schemas/Montant'
+        motif:
+          type: string
+        statut:
+          $ref: '#/components/schemas/StatutTransfert'
+        cree_le:
+          type: string
+          format: date-time
+        mis_a_jour_le:
+          type: string
+          format: date-time
+      example:
+        id: c4d5e6f7-0a1b-4c2d-8e3f-5a6b7c8d9e0f
+        compte_source_id: 3f2a8c1e-5b7d-4e19-9c3a-6d1f0a2b4c11
+        beneficiaire_id: 9a1b2c3d-4e5f-4a6b-8c7d-0e1f2a3b4c5d
+        montant: 25000
+        frais: 375
+        total_debite: 25375
+        motif: Achat de riz
+        statut: EN_ATTENTE
+        cree_le: '2026-11-12T08:30:00Z'
+
+    AnnulationDemande:
+      type: object
+      additionalProperties: false
+      properties:
+        raison:
+          type: string
+          maxLength: 140
+
+    Transaction:
+      type: object
+      required: [id, compte_id, type, montant, statut, date]
+      properties:
+        id:
+          type: string
+          format: uuid
+        compte_id:
+          type: string
+          format: uuid
+        transfert_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [DEBIT, CREDIT, FRAIS, REMBOURSEMENT]
+        montant:
+          $ref: '#/components/schemas/Montant'
+        statut:
+          $ref: '#/components/schemas/StatutTransfert'
+        date:
+          type: string
+          format: date-time
+
+    PageInfo:
+      type: object
+      required: [page, taille, total]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        taille:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+          description: Nombre total d'éléments, toutes pages confondues
+
+    PageComptes:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [elements]
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/Compte'
+
+    PageBeneficiaires:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [elements]
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/Beneficiaire'
+
+    PageTransactions:
+      allOf:
+        - $ref: '#/components/schemas/PageInfo'
+        - type: object
+          required: [elements]
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+
+    Probleme:
+      type: object
+      description: Détail d'erreur au format RFC 9457 (`application/problem+json`)
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+          description: Code d'erreur stable, utilisé par les tests de conformité
+          enum:
+            - VALIDATION
+            - NON_AUTHENTIFIE
+            - INTERDIT
+            - INTROUVABLE
+            - CONFLIT
+            - IDEMPOTENCE_CONFLIT
+            - VERSION_OBSOLETE
+            - SOLDE_INSUFFISANT
+            - PLAFOND_DEPASSE
+            - MONTANT_TROP_FAIBLE
+            - TRANSFERT_NON_ANNULABLE
+            - LIMITE_DEBIT
+        erreurs:
+          type: array
+          description: Détail par champ, pour les erreurs de validation
+          items:
+            type: object
+            required: [champ, message]
+            properties:
+              champ:
+                type: string
+              message:
+                type: string
