@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.ETU001979"
-version = "0.0.1"
+version = "0.1"
 description = "madapay-RAFIDINJANAHARY_Emmanuel"
 
 java {
@@ -32,4 +32,8 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+tasks.bootBuildImage {
+	imageName = "madapay-etu001979:0.1"
 }
