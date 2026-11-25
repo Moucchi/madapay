@@ -1,6 +1,6 @@
-package com.moucchi.madapayrafidinjanaharyemmanuel.configuration;
+package com.ETU001979.madapay_rafidinjanahary_emmanuel.configuration;
 
-import com.moucchi.madapayrafidinjanaharyemmanuel.businessObject.Compte;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.businessObject.Compte;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -13,7 +13,7 @@ import java.io.InputStream;
 import java.util.List;
 
 @Configuration
-public class DataConf{
+public class DataConf {
     private final ObjectMapper mapper;
 
     public DataConf(ObjectMapper mapper) {
@@ -27,6 +27,13 @@ public class DataConf{
         JsonNode root = mapper.readTree(seed);
         JsonNode comptesNode = root.get("comptes");
 
-        return mapper.convertValue(comptesNode, new TypeReference<List<Compte>>() {});
+        long plafond = root.get("plafond_journalier").asLong();
+
+        return mapper.convertValue(comptesNode, new TypeReference<List<Compte>>() {
+        }).stream().peek(compte -> {
+            compte.setId(java.util.UUID.randomUUID().toString());
+            compte.setPlafondJournalier(plafond);
+            compte.setCreeLe(java.time.Instant.now());
+        }).toList();
     }
 }

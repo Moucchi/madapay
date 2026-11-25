@@ -5,8 +5,8 @@ plugins {
 	id("org.graalvm.buildtools.native") version "1.1.18"
 }
 
-group = "com.moucchi"
-version = "0.0.1-SNAPSHOT"
+group = "com.ETU001979"
+version = "0.0.1"
 description = "madapay-RAFIDINJANAHARY_Emmanuel"
 
 java {
