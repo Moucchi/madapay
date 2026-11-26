@@ -1,0 +1,53 @@
+package com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.controller;
+
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.validation.IdempotencyKey;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.TransfertCreationRequest;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.TransfertResponse;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.service.TransfertService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
+import java.util.UUID;
+
+/** Transferts (contrat, tag « Transferts »). */
+@RestController
+@RequestMapping("/transferts")
+public class TransfertController {
+
+    private final TransfertService transfertService;
+
+    public TransfertController(TransfertService transfertService) {
+        this.transfertService = transfertService;
+    }
+
+    /** creerTransfert : 201 + Location. L'idempotence (rejeu) arrive au TP3 ; ici l'en-tête est exigé. */
+    @PostMapping
+    public ResponseEntity<TransfertResponse> creer(
+            @RequestHeader(value = IdempotencyKey.EN_TETE, required = false) String cleIdempotence,
+            @Valid @RequestBody TransfertCreationRequest corps) {
+        IdempotencyKey.exiger(cleIdempotence);
+        corps.exigerAucunChampInconnu();
+
+        TransfertResponse cree = TransfertResponse.from(transfertService.creer(corps));
+        URI location = ServletUriComponentsBuilder.fromCurrentRequestUri()
+                .path("/{id}")
+                .buildAndExpand(cree.id())
+                .toUri();
+        return ResponseEntity.created(location).body(cree);
+    }
+
+    /** lireTransfert. */
+    @GetMapping("/{transfertId}")
+    public TransfertResponse lire(@PathVariable UUID transfertId) {
+        return TransfertResponse.from(transfertService.lire(transfertId));
+    }
+}

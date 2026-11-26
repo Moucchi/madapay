@@ -1,6 +1,6 @@
 # ETU001979 - RAFIDINJANAHARY Emmanuel
 ## Stack
-Spring boot
+Spring Boot 4 (Java 25, Gradle)
 
 ## Commande de demarrage
 

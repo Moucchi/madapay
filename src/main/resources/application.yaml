@@ -1,14 +1,24 @@
 spring:
   application:
     name: madapay-RAFIDINJANAHARY_Emmanuel
+  jackson:
+    deserialization:
+      accept-float-as-int: false
 
 server:
   port: 8080
 
 madapay:
-  base-type : https://madapay.example/erreurs/
+  base-type: https://madapay.example/erreurs/
   pagination:
     taille-max: 100
     defaut:
       page: 1
       taille: 20
+  transfert:
+    montant-min: 100
+    fenetre-annulation: 60s
+    frais:
+      seuil-sans-frais: 1000
+      min: 50
+      pourcentage: 1.5
