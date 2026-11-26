@@ -1,5 +1,14 @@
 spring:
   application:
     name: madapay-RAFIDINJANAHARY_Emmanuel
+
 server:
   port: 8080
+
+madapay:
+  base-type : https://madapay.example/erreurs/
+  pagination:
+    taille-max: 100
+    defaut:
+      page: 1
+      taille: 20

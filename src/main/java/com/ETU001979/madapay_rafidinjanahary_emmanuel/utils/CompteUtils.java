@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 public class CompteUtils {
     public CompteDTO toDTO(Compte compte){
         return CompteDTO.builder()
-                .id(compte.getId())
+                .id(compte.getId().toString())
                 .telephone(compte.getTelephone())
                 .titulaire(compte.getTitulaire())
                 .solde(compte.getSolde())

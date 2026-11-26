@@ -8,13 +8,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class Compte {
     @JsonIgnore
-    String id;
+    UUID id;
 
     @JsonProperty("telephone")
     String telephone;

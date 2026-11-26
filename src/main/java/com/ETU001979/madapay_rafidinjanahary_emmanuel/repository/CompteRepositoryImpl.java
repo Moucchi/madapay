@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 public class CompteRepositoryImpl implements CompteRepository {
@@ -22,10 +23,16 @@ public class CompteRepositoryImpl implements CompteRepository {
     @Override
     public CompteDTO getCompteById(String id) {
         Compte compte = comptes.stream()
-                .filter(c -> c.getId().equals(id))
+                .filter(c -> c.getId().toString().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new CompteNotFoundException("Le compte avec l'ID " + id + " n'existe pas"));
 
         return compteUtils.toDTO(compte);
+    }
+
+    public void verifierExistanceCompte(String compteId) {
+        if (comptes.stream().noneMatch(c -> c.getId().toString().equals(compteId))) {
+            throw new NoSuchElementException("Aucun compte trouvé avec l'ID : " + compteId);
+        }
     }
 }

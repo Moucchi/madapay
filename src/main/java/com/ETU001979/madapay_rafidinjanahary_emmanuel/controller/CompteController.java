@@ -7,11 +7,14 @@ import com.ETU001979.madapay_rafidinjanahary_emmanuel.exception.PageException;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.repository.CompteRepository;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.service.PageService;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.utils.CompteUtils;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.dto.PageRequestDTO;
 
 @RestController
 @RequestMapping("/comptes")
@@ -20,19 +23,24 @@ public class CompteController {
     private final CompteRepository compteRepository;
     private final PageService pageService;
     private final CompteUtils compteUtils;
+    private final int defaultPage;
+    private final int defaultTaille;
 
     public CompteController(@Qualifier("loadComptes") List<Compte> comptes,
-                            CompteRepository compteRepository, PageService pageService, CompteUtils compteUtils) {
+                            CompteRepository compteRepository, PageService pageService, CompteUtils compteUtils,
+                            @Value("${madapay.pagination.defaut.page}") int defaultPage,
+                            @Value("${madapay.pagination.defaut.taille}") int defaultTaille) {
         this.comptes = comptes;
         this.compteRepository = compteRepository;
         this.pageService = pageService;
         this.compteUtils = compteUtils;
+        this.defaultPage = defaultPage;
+        this.defaultTaille = defaultTaille;
     }
 
     @GetMapping
     public PageResponse<CompteDTO> getComptes(
-            @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "taille", defaultValue = "20") int taille,
+            @Valid @ModelAttribute PageRequestDTO pagination,
             @RequestParam(value = "telephone", required = false) Optional<String> telephone
     ) {
         if (telephone.filter(numero -> !numero.matches("03[2348][0-9]{7}")).isPresent()) {
@@ -40,11 +48,15 @@ public class CompteController {
         }
 
         List<CompteDTO> comptesFiltres = comptes.stream()
-                .filter(compte -> telephone.isEmpty() || telephone.get().equals(compte.getTelephone()))
+                .filter(compte -> telephone.isEmpty()
+                        || telephone.get().equals(compte.getTelephone()))
                 .map(compteUtils::toDTO)
                 .toList();
 
-        return pageService.getPage(comptesFiltres, page, taille);
+        return pageService.getPage(
+                comptesFiltres,
+                pagination.withDefaults(defaultPage, defaultTaille)
+        );
     }
 
     @GetMapping("/{id}")

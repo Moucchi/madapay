@@ -31,7 +31,7 @@ public class DataConf {
 
         return mapper.convertValue(comptesNode, new TypeReference<List<Compte>>() {
         }).stream().peek(compte -> {
-            compte.setId(java.util.UUID.randomUUID().toString());
+            compte.setId(java.util.UUID.randomUUID());
             compte.setPlafondJournalier(plafond);
             compte.setCreeLe(java.time.Instant.now());
         }).toList();
