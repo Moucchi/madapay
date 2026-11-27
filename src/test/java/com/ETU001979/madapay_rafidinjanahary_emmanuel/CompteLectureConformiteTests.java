@@ -2,6 +2,8 @@ package com.ETU001979.madapay_rafidinjanahary_emmanuel;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.io.ClassPathResource;
@@ -129,6 +131,13 @@ class CompteLectureConformiteTests {
                 .doesNotContainAnyElementsOf(StreamSupport.stream(comptesSuivants.spliterator(), false)
                         .map(compte -> compte.required("id"))
                         .toList());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"taille, 0", "taille, 101", "page, 0", "page, -1"})
+    @Tag("defi")
+    void refuseLesBornesDePagination(String parametre, int valeur) throws Exception {
+        verifierProbleme(get("/comptes?" + parametre + "=" + valeur), 400, "VALIDATION");
     }
 
     private static void verifierProbleme(HttpResponse<String> reponse, int statut, String code) {
