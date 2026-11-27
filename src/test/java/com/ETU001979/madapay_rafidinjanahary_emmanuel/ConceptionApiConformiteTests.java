@@ -292,6 +292,13 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
                 .isSortedAccordingTo(Comparator.reverseOrder());
     }
 
+    @ParameterizedTest
+    @Tag("extension")
+    @ValueSource(strings = {"statut=INCONNU", "du=2026-13-45", "au=demain", "tri=solde", "taille=0"})
+    void historiqueParametresInvalidesRenvoie400(String parametres) throws Exception {
+        verifierProbleme(historique("hery", parametres), 400, "VALIDATION");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
