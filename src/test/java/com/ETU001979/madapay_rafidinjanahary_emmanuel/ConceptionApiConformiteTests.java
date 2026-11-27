@@ -305,6 +305,22 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(get("/comptes/" + UUID.randomUUID() + "/transactions"), 404, "INTROUVABLE");
     }
 
+    @Test
+    @Tag("defi")
+    void annuleUnTransfertEnAttente() throws Exception {
+        var avant = solde("hery");
+        var transfert = corps(creerTransfert("hery", 40000), 201);
+        assertThat(solde("hery")).isEqualTo(avant - montant(transfert, "total_debite"));
+
+        var annule = corps(post(annulation(texte(transfert, "id")), Map.of("raison", "Erreur de saisie")), 200);
+
+        assertThat(texte(annule, "statut")).isEqualTo("ANNULEE");
+        assertThat(solde("hery")).isEqualTo(avant);
+        assertThat(transactionsDuTransfert(transfert, "hery").toList())
+                .extracting(transaction -> texte(transaction, "type"))
+                .contains("REMBOURSEMENT");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
@@ -391,5 +407,9 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         var id = texte(transfert, "id");
         return StreamSupport.stream(elements.spliterator(), false)
                 .filter(transaction -> id.equals(transaction.path("transfert_id").stringValue()));
+    }
+
+    private static String annulation(String id) {
+        return "/transferts/" + id + "/annulation";
     }
 }
