@@ -159,6 +159,19 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(montant(transfert, "total_debite")).isEqualTo(montant + frais);
     }
 
+    @Test
+    @Tag("extension")
+    void litUnTransfert() throws Exception {
+        var transfert = corps(creerTransfert("hery", 2500), 201);
+        var lu = corps(get("/transferts/" + texte(transfert, "id")), 200);
+
+        for (var champ : List.of("id", "montant", "frais", "total_debite", "statut",
+                "compte_source_id", "beneficiaire_id")) {
+            assertThat(lu.required(champ)).as("Champ %s", champ).isEqualTo(transfert.required(champ));
+        }
+        verifierProbleme(get("/transferts/" + UUID.randomUUID()), 404, "INTROUVABLE");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
