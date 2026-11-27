@@ -35,6 +35,18 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierLocation(reponse, base + "/" + texte(beneficiaire, "id"));
     }
 
+    @Test
+    @Tag("socle")
+    void litEtListeLesBeneficiaires() throws Exception {
+        var beneficiaire = creerBeneficiaire("rasoa");
+        var base = beneficiaires("rasoa");
+        var id = texte(beneficiaire, "id");
+
+        assertThat(corps(get(base + "/" + id), 200)).isEqualTo(beneficiaire);
+        var page = corps(get(base + "?taille=100"), 200);
+        assertThat(elementsPage(page)).extracting(element -> texte(element, "id")).contains(id);
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
@@ -55,5 +67,19 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
 
     private static void verifierLocation(HttpResponse<String> reponse, String chemin) {
         assertThat(reponse.headers().firstValue("Location").orElse("")).endsWith(chemin);
+    }
+
+    private JsonNode creerBeneficiaire(String cle) throws IOException, InterruptedException {
+        return corps(post(beneficiaires(cle),
+                Map.of("nom", "Bénéficiaire test", "telephone", prochainTelephone())), 201);
+    }
+
+    private static JsonNode elementsPage(JsonNode page) {
+        page.required("page");
+        page.required("taille");
+        page.required("total");
+        var elements = page.required("elements");
+        assertThat(elements.isArray()).isTrue();
+        return elements;
     }
 }
