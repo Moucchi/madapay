@@ -88,6 +88,18 @@ class CompteLectureConformiteTests {
         verifierProbleme(get("/cette-route-n-existe-pas"), 404, null);
     }
 
+    @Test
+    @Tag("defi")
+    void filtreParTelephone() throws Exception {
+        var hery = compteDuJeuDeDonnees("hery");
+        var page = corps(get("/comptes?telephone=" + hery.required("telephone").stringValue()), 200);
+
+        assertThat(page.required("total").longValue()).isEqualTo(1L);
+        assertThat(page.required("elements"))
+                .extracting(compte -> compte.required("titulaire"))
+                .containsExactly(hery.required("titulaire"));
+    }
+
     private static void verifierProbleme(HttpResponse<String> reponse, int statut, String code) {
         var probleme = corps(reponse, statut);
 
