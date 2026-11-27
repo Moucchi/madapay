@@ -211,6 +211,20 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(post("/transferts", donnees), 400, "VALIDATION");
     }
 
+    @Test
+    @Tag("extension")
+    void beneficiaireOuCompteInconnuRenvoie404() throws Exception {
+        var beneficiaire = creerBeneficiaire("andry");
+        var donnees = JSON.createObjectNode()
+                .put("compte_source_id", compteId("hery"))
+                .put("beneficiaire_id", texte(beneficiaire, "id"))
+                .put("montant", 1000);
+
+        verifierProbleme(postTransfert(donnees), 404, "INTROUVABLE");
+        donnees.put("compte_source_id", UUID.randomUUID().toString());
+        verifierProbleme(postTransfert(donnees), 404, "INTROUVABLE");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
