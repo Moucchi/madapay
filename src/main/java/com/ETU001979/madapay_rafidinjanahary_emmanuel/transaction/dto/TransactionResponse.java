@@ -16,6 +16,6 @@ public record TransactionResponse(
         Instant date
 ) {
     public enum Type {
-        DEBIT, FRAIS
+        DEBIT, FRAIS, REMBOURSEMENT
     }
 }

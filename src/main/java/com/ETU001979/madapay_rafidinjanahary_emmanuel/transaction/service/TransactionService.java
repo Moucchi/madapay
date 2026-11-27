@@ -46,32 +46,35 @@ public class TransactionService {
         compteService.verifierExistence(compteId);
         Instant maintenant = clock.instant();
         List<TransactionResponse> transactions = transferts.findAllByCompteSource(compteId).stream()
-                .flatMap(transfert -> transactionsDuTransfert(transfert, maintenant, filtres))
+                .flatMap(transfert -> transactionsDuTransfert(transfert, maintenant))
+                .filter(transaction -> filtres.correspond(transaction.statut(),
+                        LocalDate.ofInstant(transaction.date(), clock.getZone())))
                 .sorted(tri.comparateur())
                 .toList();
         return pageService.paginer(transactions, pagination);
     }
 
-    private Stream<TransactionResponse> transactionsDuTransfert(Transfert transfert, Instant maintenant,
-                                                              TransactionFiltres filtres) {
+    private Stream<TransactionResponse> transactionsDuTransfert(Transfert transfert, Instant maintenant) {
         TransfertStatut statut = transfert.statutA(maintenant, fenetreAnnulation);
-        LocalDate date = LocalDate.ofInstant(transfert.getCreeLe(), clock.getZone());
-        if (!filtres.correspond(statut, date)) {
-            return Stream.empty();
+        Instant creation = transfert.getCreeLe();
+        Stream.Builder<TransactionResponse> transactions = Stream.builder();
+        transactions.add(transaction(transfert, Type.DEBIT, transfert.getMontant(), statut, creation));
+        if (transfert.getFrais() > 0) {
+            transactions.add(transaction(transfert, Type.FRAIS, transfert.getFrais(), statut, creation));
         }
-        TransactionResponse debit = transaction(transfert, Type.DEBIT, transfert.getMontant(), statut);
-        if (transfert.getFrais() == 0) {
-            return Stream.of(debit);
+        if (statut == TransfertStatut.ANNULEE) {
+            transactions.add(transaction(transfert, Type.REMBOURSEMENT, transfert.getTotalDebite(), statut,
+                    transfert.getMisAJourLe()));
         }
-        return Stream.of(debit, transaction(transfert, Type.FRAIS, transfert.getFrais(), statut));
+        return transactions.build();
     }
 
     private static TransactionResponse transaction(Transfert transfert, Type type, long montant,
-                                                   TransfertStatut statut) {
+                                                   TransfertStatut statut, Instant date) {
         // L'identifiant reste stable lorsque la transaction est reconstruite à la lecture.
         String cle = transfert.getId() + ":" + type.name();
         UUID id = UUID.nameUUIDFromBytes(cle.getBytes(StandardCharsets.UTF_8));
         return new TransactionResponse(id, transfert.getCompteSourceId(), transfert.getId(),
-                type, montant, statut, transfert.getCreeLe());
+                type, montant, statut, date);
     }
 }

@@ -1,10 +1,13 @@
 package com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.controller;
 
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.validation.IdempotencyKey;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.AnnulationDemande;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.TransfertCreationRequest;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.TransfertResponse;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.model.Transfert;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.service.TransfertService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,17 +40,30 @@ public class TransfertController {
         IdempotencyKey.exiger(cleIdempotence);
         corps.exigerAucunChampInconnu();
 
-        TransfertResponse cree = TransfertResponse.from(transfertService.creer(corps));
+        Transfert cree = transfertService.creer(corps);
         URI location = ServletUriComponentsBuilder.fromCurrentRequestUri()
                 .path("/{id}")
-                .buildAndExpand(cree.id())
+                .buildAndExpand(cree.getId())
                 .toUri();
-        return ResponseEntity.created(location).body(cree);
+        return repondre(ResponseEntity.created(location), cree);
     }
 
     /** lireTransfert. */
     @GetMapping("/{transfertId}")
-    public TransfertResponse lire(@PathVariable UUID transfertId) {
-        return TransfertResponse.from(transfertService.lire(transfertId));
+    public ResponseEntity<TransfertResponse> lire(@PathVariable UUID transfertId) {
+        return repondre(ResponseEntity.ok(), transfertService.lire(transfertId));
+    }
+
+    @PostMapping("/{transfertId}/annulation")
+    public ResponseEntity<TransfertResponse> annuler(
+            @PathVariable UUID transfertId,
+            @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch,
+            @RequestBody(required = false) AnnulationDemande demande) {
+        String raison = demande == null ? null : demande.raisonValidee();
+        return repondre(ResponseEntity.ok(), transfertService.annuler(transfertId, raison, ifMatch));
+    }
+
+    private static ResponseEntity<TransfertResponse> repondre(ResponseEntity.BodyBuilder reponse, Transfert transfert) {
+        return reponse.eTag(transfert.version(transfert.getStatut())).body(TransfertResponse.from(transfert));
     }
 }

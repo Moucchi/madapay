@@ -103,11 +103,16 @@ public class ApiExceptionHandler {
         return probleme(HttpStatus.UNSUPPORTED_MEDIA_TYPE, null, e.getMessage(), req, null);
     }
 
-    // --- 409 / 422 ---------------------------------------------------------------------------
+    // --- 409 / 412 / 422 ---------------------------------------------------------------------
 
     @ExceptionHandler(ConflitException.class)
     public ProblemDetail conflit(ConflitException e, HttpServletRequest req) {
         return probleme(HttpStatus.CONFLICT, e.getCode(), e.getMessage(), req, null);
+    }
+
+    @ExceptionHandler(VersionObsoleteException.class)
+    public ProblemDetail versionObsolete(VersionObsoleteException e, HttpServletRequest req) {
+        return probleme(HttpStatus.PRECONDITION_FAILED, Code.VERSION_OBSOLETE, e.getMessage(), req, null);
     }
 
     @ExceptionHandler(RegleMetierException.class)

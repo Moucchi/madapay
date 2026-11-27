@@ -15,4 +15,7 @@ public interface TransfertService {
 
     /** Transfert avec son statut déduit à la lecture. */
     Transfert lire(UUID id);
+
+    /** Annule un transfert encore en attente et restitue le montant débité au compte source. */
+    Transfert annuler(UUID id, String raison, String ifMatch);
 }
