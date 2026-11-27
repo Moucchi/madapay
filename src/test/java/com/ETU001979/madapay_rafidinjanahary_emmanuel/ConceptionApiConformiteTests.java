@@ -11,6 +11,7 @@ import tools.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -108,6 +109,17 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
 
         verifierChampsInvalides(post(base, Map.of("nom", "A", "telephone", prochainTelephone())), "nom");
         verifierChampsInvalides(post(base, Map.of()), "nom", "telephone");
+    }
+
+    @Test
+    @Tag("socle")
+    void accepteLesQuatrePrefixesMalgaches() throws Exception {
+        var base = beneficiaires("andry");
+        for (var prefixe : List.of("032", "033", "034", "038")) {
+            var reponse = post(base, Map.of("nom", "Préfixe " + prefixe, "telephone", prefixe + "1234567"));
+            assertThat(reponse.statusCode()).as("Préfixe %s, corps %s", prefixe, reponse.body())
+                    .isIn(201, 409);
+        }
     }
 
     private String beneficiaires(String cle) throws IOException, InterruptedException {
