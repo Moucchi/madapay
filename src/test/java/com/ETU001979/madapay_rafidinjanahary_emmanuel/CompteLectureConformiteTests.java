@@ -82,6 +82,12 @@ class CompteLectureConformiteTests {
         verifierProbleme(get("/comptes/" + UUID.randomUUID()), 404, "INTROUVABLE");
     }
 
+    @Test
+    @Tag("extension")
+    void routeInconnueRenvoieUnProbleme404() throws Exception {
+        verifierProbleme(get("/cette-route-n-existe-pas"), 404, null);
+    }
+
     private static void verifierProbleme(HttpResponse<String> reponse, int statut, String code) {
         var probleme = corps(reponse, statut);
 
