@@ -332,6 +332,22 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(postSansCorps(annulation(UUID.randomUUID().toString())), 404, "INTROUVABLE");
     }
 
+    @Test
+    @Tag("defi")
+    void valideStrictementLesCorpsJson() throws Exception {
+        var beneficiaire = creerBeneficiaire("rasoa");
+        var base = beneficiaires("rasoa");
+        var chemin = base + "/" + texte(beneficiaire, "id");
+
+        verifierProbleme(post(base, Map.of("nom", "Test", "telephone", prochainTelephone(), "inconnu", 1)),
+                400, "VALIDATION");
+        verifierProbleme(patch(chemin, Map.of()), 400, "VALIDATION");
+        verifierProbleme(patch(chemin, Map.of("telephone", "0361234567")), 400, "VALIDATION");
+        var jsonInvalide = requete(base).header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{pas du json"));
+        verifierProbleme(envoyer(jsonInvalide), 400, "VALIDATION");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
