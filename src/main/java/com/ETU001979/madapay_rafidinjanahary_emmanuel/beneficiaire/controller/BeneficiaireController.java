@@ -24,7 +24,6 @@ import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
 
-/** Bénéficiaires d'un compte : CRUD complet (contrat, tag « Bénéficiaires »). */
 @RestController
 @RequestMapping("/comptes/{compteId}/beneficiaires")
 public class BeneficiaireController {
@@ -39,7 +38,6 @@ public class BeneficiaireController {
         this.pageService = pageService;
     }
 
-    /** creerBeneficiaire : 201 + Location. */
     @PostMapping
     public ResponseEntity<BeneficiaireResponse> creer(@PathVariable UUID compteId,
                                                       @Valid @RequestBody BeneficiaireCreationRequest corps) {
@@ -52,7 +50,6 @@ public class BeneficiaireController {
         return ResponseEntity.created(location).body(cree);
     }
 
-    /** listerBeneficiaires. */
     @GetMapping
     public PageResponse<BeneficiaireResponse> lister(@PathVariable UUID compteId,
                                                      @Valid @ModelAttribute PageQuery pagination) {
@@ -60,13 +57,11 @@ public class BeneficiaireController {
                 .map(BeneficiaireResponse::from);
     }
 
-    /** lireBeneficiaire. */
     @GetMapping("/{beneficiaireId}")
     public BeneficiaireResponse lire(@PathVariable UUID compteId, @PathVariable UUID beneficiaireId) {
         return BeneficiaireResponse.from(beneficiaireService.lire(compteId, beneficiaireId));
     }
 
-    /** modifierBeneficiaire : JSON Merge Patch. */
     @PatchMapping(value = "/{beneficiaireId}", consumes = {MERGE_PATCH_JSON, MediaType.APPLICATION_JSON_VALUE})
     public BeneficiaireResponse modifier(@PathVariable UUID compteId,
                                          @PathVariable UUID beneficiaireId,
@@ -74,7 +69,6 @@ public class BeneficiaireController {
         return BeneficiaireResponse.from(beneficiaireService.modifier(compteId, beneficiaireId, patch));
     }
 
-    /** supprimerBeneficiaire : 204 sans corps. */
     @DeleteMapping("/{beneficiaireId}")
     public ResponseEntity<Void> supprimer(@PathVariable UUID compteId, @PathVariable UUID beneficiaireId) {
         beneficiaireService.supprimer(compteId, beneficiaireId);

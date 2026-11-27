@@ -9,7 +9,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** La taille de page ne dépasse pas {@code madapay.pagination.taille-max}. */
 @Documented
 @Constraint(validatedBy = MaxConfiguredTailleValidator.class)
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER, ElementType.ANNOTATION_TYPE, ElementType.RECORD_COMPONENT})

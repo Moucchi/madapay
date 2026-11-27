@@ -1,9 +1,5 @@
 package com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.error;
 
-/**
- * Codes d'erreur stables du contrat (schéma {@code Probleme.code}),
- * avec le titre et le suffixe d'URI {@code type} associés (RFC 9457).
- */
 public enum Code {
     VALIDATION("Requête invalide", "validation"),
     NON_AUTHENTIFIE("Non authentifié", "non-authentifie"),

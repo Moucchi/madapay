@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-/** Structure du fichier contrat/seed.json. */
 public record SeedFichier(
         int version,
         @JsonProperty("plafond_journalier") long plafondJournalier,

@@ -11,7 +11,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/** Bénéficiaires en mémoire, rangés par compte (ordre d'insertion conservé, accès concurrent sûr). */
 @Repository
 public class InMemoryBeneficiaireRepository implements BeneficiaireRepository {
 
@@ -40,7 +39,7 @@ public class InMemoryBeneficiaireRepository implements BeneficiaireRepository {
         List<Beneficiaire> liste = parCompte.computeIfAbsent(beneficiaire.getCompteId(), k -> new CopyOnWriteArrayList<>());
         for (int i = 0; i < liste.size(); i++) {
             if (liste.get(i).getId().equals(beneficiaire.getId())) {
-                liste.set(i, beneficiaire);   // mise à jour : la position est conservée
+                liste.set(i, beneficiaire);
                 return beneficiaire;
             }
         }

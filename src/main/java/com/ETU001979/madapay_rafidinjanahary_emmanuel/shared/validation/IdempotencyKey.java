@@ -2,7 +2,6 @@ package com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.validation;
 
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.error.ValidationException;
 
-/** En-tête Idempotency-Key du contrat : obligatoire, 8 à 64 caractères. */
 public final class IdempotencyKey {
 
     public static final String EN_TETE = "Idempotency-Key";

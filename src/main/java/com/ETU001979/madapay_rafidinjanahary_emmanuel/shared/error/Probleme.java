@@ -11,7 +11,6 @@ import org.springframework.http.ProblemDetail;
 import java.net.URI;
 import java.util.List;
 
-/** ProblemDetail (RFC 9457) enrichi des extensions du contrat : {@code code} et {@code erreurs}. */
 @Getter
 @Setter
 @NoArgsConstructor

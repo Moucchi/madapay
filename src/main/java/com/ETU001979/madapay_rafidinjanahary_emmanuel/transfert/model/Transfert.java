@@ -26,15 +26,10 @@ public class Transfert {
     private Instant misAJourLe;
     private String raisonAnnulation;
 
-    /** Le statut courant identifie la version, y compris après expiration du délai d'annulation. */
     public String version(TransfertStatut statutCourant) {
         return id + "-" + statutCourant;
     }
 
-    /**
-     * Statut déduit à la lecture (contrat) : un transfert EN_ATTENTE devient REUSSIE
-     * une fois la fenêtre d'annulation écoulée.
-     */
     public TransfertStatut statutA(Instant maintenant, Duration fenetreAnnulation) {
         if (statut == TransfertStatut.EN_ATTENTE && !maintenant.isBefore(creeLe.plus(fenetreAnnulation))) {
             return TransfertStatut.REUSSIE;
@@ -42,7 +37,6 @@ public class Transfert {
         return statut;
     }
 
-    /** Vrai si le montant compte dans le plafond journalier (un transfert annulé est remboursé). */
     public boolean comptePourLePlafond() {
         return statut != TransfertStatut.ANNULEE && statut != TransfertStatut.ECHOUEE;
     }

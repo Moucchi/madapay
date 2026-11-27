@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Compte MadaPay (modèle métier, indépendant du format JSON). */
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,7 +28,6 @@ public class Compte {
         return montant <= solde;
     }
 
-    /** @throws SoldeInsuffisantException si le solde ne couvre pas le montant */
     public void debiter(long montant) {
         if (!peutDebiter(montant)) {
             throw new SoldeInsuffisantException(solde, montant);

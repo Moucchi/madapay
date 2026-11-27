@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Représentation JSON d'un transfert (schéma Transfert du contrat). */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TransfertResponse(
         UUID id,

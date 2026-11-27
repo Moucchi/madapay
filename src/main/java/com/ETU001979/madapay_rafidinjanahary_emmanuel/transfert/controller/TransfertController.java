@@ -21,7 +21,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.UUID;
 
-/** Transferts (contrat, tag « Transferts »). */
 @RestController
 @RequestMapping("/transferts")
 public class TransfertController {
@@ -32,7 +31,6 @@ public class TransfertController {
         this.transfertService = transfertService;
     }
 
-    /** creerTransfert : 201 + Location. L'idempotence (rejeu) arrive au TP3 ; ici l'en-tête est exigé. */
     @PostMapping
     public ResponseEntity<TransfertResponse> creer(
             @RequestHeader(value = IdempotencyKey.EN_TETE, required = false) String cleIdempotence,
@@ -48,7 +46,6 @@ public class TransfertController {
         return repondre(ResponseEntity.created(location), cree);
     }
 
-    /** lireTransfert. */
     @GetMapping("/{transfertId}")
     public ResponseEntity<TransfertResponse> lire(@PathVariable UUID transfertId) {
         return repondre(ResponseEntity.ok(), transfertService.lire(transfertId));

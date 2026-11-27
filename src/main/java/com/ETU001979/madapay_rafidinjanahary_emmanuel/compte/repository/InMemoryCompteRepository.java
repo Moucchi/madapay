@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Comptes en mémoire, chargés depuis le seed au démarrage (ordre du fichier conservé). */
 @Repository
 public class InMemoryCompteRepository implements CompteRepository {
 

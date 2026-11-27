@@ -15,7 +15,6 @@ public interface BeneficiaireService {
 
     Beneficiaire lire(UUID compteId, UUID beneficiaireId);
 
-    /** JSON Merge Patch (RFC 7396) : seuls les champs présents sont modifiés. */
     Beneficiaire modifier(UUID compteId, UUID beneficiaireId, Map<String, Object> patch);
 
     void supprimer(UUID compteId, UUID beneficiaireId);

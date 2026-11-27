@@ -11,10 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Valide un corps de modification (schéma BeneficiaireModification :
- * minProperties 1, additionalProperties false, valeurs non nulles).
- */
 @Component
 public class BeneficiairePatchValidator {
 

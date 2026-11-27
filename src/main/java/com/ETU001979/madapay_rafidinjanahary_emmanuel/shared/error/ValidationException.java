@@ -2,7 +2,6 @@ package com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.error;
 
 import java.util.List;
 
-/** Entrée invalide : 400, code VALIDATION, avec le détail par champ. */
 public class ValidationException extends RuntimeException {
 
     private final List<Erreur> erreurs;

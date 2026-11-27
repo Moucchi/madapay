@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Représentation JSON d'un bénéficiaire (schéma Beneficiaire du contrat). */
 public record BeneficiaireResponse(
         UUID id,
         @JsonProperty("compte_id") UUID compteId,

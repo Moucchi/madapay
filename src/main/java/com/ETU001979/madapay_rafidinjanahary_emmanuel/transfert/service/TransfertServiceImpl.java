@@ -34,7 +34,6 @@ public class TransfertServiceImpl implements TransfertService {
     private final MadapayProperties.RegleTransfert regles;
     private final Clock clock;
 
-    /** Un verrou par compte source pour sérialiser créations et annulations (solde, plafond). */
     private final Map<UUID, Object> verrous = new ConcurrentHashMap<>();
 
     public TransfertServiceImpl(TransfertRepository repository,
@@ -54,21 +53,21 @@ public class TransfertServiceImpl implements TransfertService {
     @Override
     public Transfert creer(TransfertCreationRequest requete) {
         UUID compteId = requete.getCompteSourceId();
-        Compte compte = compteService.lire(compteId);                          // 404
-        beneficiaireService.lire(compteId, requete.getBeneficiaireId());      // 404 (doit appartenir au compte)
+        Compte compte = compteService.lire(compteId);
+        beneficiaireService.lire(compteId, requete.getBeneficiaireId());
 
         long montant = requete.getMontant();
         if (montant < regles.montantMin()) {
-            throw new MontantTropFaibleException(montant, regles.montantMin()); // 422
+            throw new MontantTropFaibleException(montant, regles.montantMin());
         }
         long frais = fraisCalculator.calculer(montant);
         long totalDebite = montant + frais;
 
         synchronized (verrous.computeIfAbsent(compteId, id -> new Object())) {
             if (!compte.peutDebiter(totalDebite)) {
-                throw new SoldeInsuffisantException(compte.getSolde(), totalDebite); // 422
+                throw new SoldeInsuffisantException(compte.getSolde(), totalDebite);
             }
-            verifierPlafondJournalier(compte, montant);                         // 422
+            verifierPlafondJournalier(compte, montant);
 
             compteService.debiter(compteId, totalDebite);
             Instant maintenant = clock.instant();
@@ -130,7 +129,6 @@ public class TransfertServiceImpl implements TransfertService {
         return repository.findById(id).orElseThrow(() -> new TransfertIntrouvableException(id));
     }
 
-    /** Plafond : somme des montants (frais exclus) des transferts créés aujourd'hui ; l'atteindre exactement est permis. */
     private void verifierPlafondJournalier(Compte compte, long montant) {
         LocalDate aujourdhui = LocalDate.now(clock);
         long dejaTransfere = repository.findAllByCompteSource(compte.getId()).stream()

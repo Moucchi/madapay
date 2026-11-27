@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-/** Comptes (contrat, tag « Comptes »). */
 @RestController
 @RequestMapping("/comptes")
 public class CompteController {
@@ -30,7 +29,6 @@ public class CompteController {
         this.pageService = pageService;
     }
 
-    /** listerComptes : filtre exact optionnel sur le téléphone. */
     @GetMapping
     public PageResponse<CompteResponse> lister(@Valid @ModelAttribute PageQuery pagination,
                                                @RequestParam(required = false) String telephone) {
@@ -41,7 +39,6 @@ public class CompteController {
                 .map(CompteResponse::from);
     }
 
-    /** lireCompte. */
     @GetMapping("/{compteId}")
     public CompteResponse lire(@PathVariable UUID compteId) {
         return CompteResponse.from(compteService.lire(compteId));

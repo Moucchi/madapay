@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Représentation JSON d'un compte (schéma Compte du contrat). Le code PIN n'est jamais exposé. */
 public record CompteResponse(
         UUID id,
         String telephone,

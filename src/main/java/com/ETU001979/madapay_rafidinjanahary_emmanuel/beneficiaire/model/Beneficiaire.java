@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Bénéficiaire rattaché à un compte. */
 @Data
 @Builder
 @NoArgsConstructor
