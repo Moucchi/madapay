@@ -12,6 +12,8 @@ import tools.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.OffsetDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -241,6 +243,22 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(montant(debit, "montant")).isEqualTo(20000);
         assertThat(montant(frais, "montant")).isEqualTo(300);
         assertThat(texte(debit, "compte_id")).isEqualTo(compteId("hery"));
+    }
+
+    @Test
+    @Tag("extension")
+    void historiquePagineEtTrieParDateDecroissante() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            corps(creerTransfert("hery", 1000), 201);
+        }
+        var page = corps(historique("hery", "taille=2"), 200);
+        assertThat(montant(page, "taille")).isEqualTo(2);
+        assertThat(elementsPage(page)).hasSize(2);
+        assertThat(montant(page, "total")).isGreaterThanOrEqualTo(3);
+
+        assertThat(elementsPage(corps(historique("hery", "taille=100"), 200)))
+                .extracting(transaction -> OffsetDateTime.parse(texte(transaction, "date")).toInstant())
+                .isSortedAccordingTo(Comparator.reverseOrder());
     }
 
     private String beneficiaires(String cle) throws IOException, InterruptedException {
