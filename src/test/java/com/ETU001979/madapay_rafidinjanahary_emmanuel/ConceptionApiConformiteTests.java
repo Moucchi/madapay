@@ -201,6 +201,16 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(postTransfert(donnees), 400, "VALIDATION");
     }
 
+    @Test
+    @Tag("extension")
+    void cleIdempotenceObligatoire() throws Exception {
+        var beneficiaire = creerBeneficiaire("hery");
+        var donnees = Map.of("compte_source_id", compteId("hery"),
+                "beneficiaire_id", texte(beneficiaire, "id"), "montant", 1000);
+
+        verifierProbleme(post("/transferts", donnees), 400, "VALIDATION");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
