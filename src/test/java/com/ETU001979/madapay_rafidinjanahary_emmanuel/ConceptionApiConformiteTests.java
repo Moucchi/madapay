@@ -2,6 +2,7 @@ package com.ETU001979.madapay_rafidinjanahary_emmanuel;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,6 +13,7 @@ import tools.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -346,6 +348,20 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         var jsonInvalide = requete(base).header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString("{pas du json"));
         verifierProbleme(envoyer(jsonInvalide), 400, "VALIDATION");
+    }
+
+    @Test
+    @Tag("defi")
+    @Tag("lent")
+    @EnabledIfEnvironmentVariable(named = "MADAPAY_TESTS_LENTS", matches = "1")
+    void transfertReussitApresLaFenetreAnnulation() throws Exception {
+        var transfert = corps(creerTransfert("hery", 1000), 201);
+        var id = texte(transfert, "id");
+
+        Thread.sleep(Duration.ofSeconds(62));
+
+        assertThat(texte(corps(get("/transferts/" + id), 200), "statut")).isEqualTo("REUSSIE");
+        verifierProbleme(postSansCorps(annulation(id)), 409, "TRANSFERT_NON_ANNULABLE");
     }
 
     private String beneficiaires(String cle) throws IOException, InterruptedException {

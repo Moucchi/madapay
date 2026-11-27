@@ -33,6 +33,7 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	inputs.property("testsLents", providers.environmentVariable("MADAPAY_TESTS_LENTS").orElse("0"))
 }
 
 tasks.bootBuildImage {
