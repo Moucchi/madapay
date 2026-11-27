@@ -261,6 +261,22 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
                 .isSortedAccordingTo(Comparator.reverseOrder());
     }
 
+    @Test
+    @Tag("extension")
+    void historiqueFiltreParStatutEtDates() throws Exception {
+        var transfert = corps(creerTransfert("hery", 3000), 201);
+        var resultats = elementsPage(corps(historique("hery", "statut=EN_ATTENTE&taille=100"), 200));
+
+        assertThat(resultats).extracting(transaction -> transaction.path("transfert_id").stringValue())
+                .contains(texte(transfert, "id"));
+        assertThat(resultats).extracting(transaction -> texte(transaction, "statut"))
+                .containsOnly("EN_ATTENTE");
+        assertThat(montant(corps(historique("hery", "du=2000-01-01&au=2100-01-01"), 200), "total"))
+                .isGreaterThanOrEqualTo(1);
+        assertThat(montant(corps(historique("hery", "au=2000-01-01"), 200), "total")).isZero();
+        assertThat(montant(corps(historique("hery", "du=2100-01-01"), 200), "total")).isZero();
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
