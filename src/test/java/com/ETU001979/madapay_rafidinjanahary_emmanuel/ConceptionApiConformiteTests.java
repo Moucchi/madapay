@@ -54,6 +54,19 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(get(beneficiaires("rasoa") + "/" + UUID.randomUUID()), 404, "INTROUVABLE");
     }
 
+    @Test
+    @Tag("socle")
+    void modifiePartiellementUnBeneficiaire() throws Exception {
+        var beneficiaire = creerBeneficiaire("rasoa");
+        var chemin = beneficiaires("rasoa") + "/" + texte(beneficiaire, "id");
+
+        var modifie = corps(patch(chemin, Map.of("nom", "Nouveau nom")), 200);
+
+        assertThat(texte(modifie, "nom")).isEqualTo("Nouveau nom");
+        assertThat(texte(modifie, "telephone")).isEqualTo(texte(beneficiaire, "telephone"));
+        assertThat(texte(corps(get(chemin), 200), "nom")).isEqualTo("Nouveau nom");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
@@ -88,5 +101,11 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         var elements = page.required("elements");
         assertThat(elements.isArray()).isTrue();
         return elements;
+    }
+
+    private HttpResponse<String> patch(String chemin, Map<String, ?> donnees)
+            throws IOException, InterruptedException {
+        return envoyer(requete(chemin).header("Content-Type", "application/merge-patch+json")
+                .method("PATCH", HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(donnees))));
     }
 }
