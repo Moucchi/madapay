@@ -181,6 +181,13 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(solde("miora")).isEqualTo(avant);
     }
 
+    @ParameterizedTest
+    @Tag("extension")
+    @ValueSource(ints = {1, 50, 99})
+    void montantSousLeMinimumRenvoie422(int montant) throws Exception {
+        verifierProbleme(creerTransfert("hery", montant), 422, "MONTANT_TROP_FAIBLE");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
