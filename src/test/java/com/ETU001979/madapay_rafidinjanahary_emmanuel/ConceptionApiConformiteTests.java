@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -225,6 +227,22 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(postTransfert(donnees), 404, "INTROUVABLE");
     }
 
+    @Test
+    @Tag("extension")
+    void historiqueContientLeDebitEtLesFrais() throws Exception {
+        var transfert = corps(creerTransfert("hery", 20000), 201);
+        var transactions = transactionsDuTransfert(transfert, "hery").toList();
+
+        assertThat(transactions).extracting(transaction -> texte(transaction, "type")).contains("DEBIT", "FRAIS");
+        var debit = transactions.stream().filter(transaction -> "DEBIT".equals(texte(transaction, "type")))
+                .findFirst().orElseThrow();
+        var frais = transactions.stream().filter(transaction -> "FRAIS".equals(texte(transaction, "type")))
+                .findFirst().orElseThrow();
+        assertThat(montant(debit, "montant")).isEqualTo(20000);
+        assertThat(montant(frais, "montant")).isEqualTo(300);
+        assertThat(texte(debit, "compte_id")).isEqualTo(compteId("hery"));
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
@@ -298,5 +316,18 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         var valeur = noeud.required(champ);
         assertThat(valeur.isIntegralNumber()).as("Champ entier %s", champ).isTrue();
         return valeur.longValue();
+    }
+
+    private HttpResponse<String> historique(String cle, String parametres)
+            throws IOException, InterruptedException {
+        return get("/comptes/" + compteId(cle) + "/transactions?" + parametres);
+    }
+
+    private Stream<JsonNode> transactionsDuTransfert(JsonNode transfert, String cle)
+            throws IOException, InterruptedException {
+        var elements = elementsPage(corps(historique(cle, "taille=100"), 200));
+        var id = texte(transfert, "id");
+        return StreamSupport.stream(elements.spliterator(), false)
+                .filter(transaction -> id.equals(transaction.path("transfert_id").stringValue()));
     }
 }
