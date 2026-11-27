@@ -57,6 +57,31 @@ class CompteLectureConformiteTests {
                         .toList());
     }
 
+    @Test
+    @Tag("socle")
+    void litUnCompte() throws Exception {
+        var rasoa = compteDuJeuDeDonnees("rasoa");
+        var recherche = corps(get("/comptes?telephone=" + rasoa.required("telephone").stringValue()), 200);
+        var elements = recherche.required("elements");
+        assertThat(elements).hasSize(1);
+        var id = elements.get(0).required("id").stringValue();
+        var compte = corps(get("/comptes/" + id), 200);
+
+        assertThat(compte.required("id").stringValue()).isEqualTo(id);
+        assertThat(compte.required("telephone")).isEqualTo(rasoa.required("telephone"));
+        assertThat(compte.required("titulaire")).isEqualTo(rasoa.required("titulaire"));
+        assertThat(compte.required("solde").isIntegralNumber()).isTrue();
+        assertThat(compte.required("plafond_journalier").longValue()).isEqualTo(2_000_000L);
+        compte.required("cree_le");
+    }
+
+    private static JsonNode compteDuJeuDeDonnees(String cle) {
+        return StreamSupport.stream(COMPTES.spliterator(), false)
+                .filter(compte -> cle.equals(compte.required("cle").stringValue()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Compte absent du jeu de données : " + cle));
+    }
+
     private static JsonNode lireComptes() {
         try (var entree = new ClassPathResource("contrat/seed.json").getInputStream()) {
             return JSON.readTree(entree).required("comptes");
