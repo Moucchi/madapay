@@ -128,6 +128,15 @@ public class ApiExceptionHandler {
     }
 
 
+    @ExceptionHandler(LimiteDebitException.class)
+    public ResponseEntity<ProblemDetail> limiteDebit(LimiteDebitException e, HttpServletRequest req) {
+        var statut = HttpStatus.TOO_MANY_REQUESTS;
+        return ResponseEntity.status(statut)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(e.delaiSecondes()))
+                .body(probleme(statut, Code.LIMITE_DEBIT, e.getMessage(), req, null));
+    }
+
+
     private Probleme probleme(HttpStatus statut, Code code, String detail,
                               HttpServletRequest req, List<Erreur> erreurs) {
         return Probleme.builder()
