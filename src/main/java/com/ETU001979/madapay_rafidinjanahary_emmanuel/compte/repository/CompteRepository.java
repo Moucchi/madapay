@@ -12,5 +12,7 @@ public interface CompteRepository {
 
     Optional<Compte> findById(UUID id);
 
+    Optional<Compte> findByTelephone(String telephone);
+
     boolean existsById(UUID id);
 }

@@ -2,8 +2,10 @@ package com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.error;
 
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.config.MadapayProperties;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -68,6 +70,15 @@ public class ApiExceptionHandler {
         }
         List<Erreur> erreurs = List.of(new Erreur(e.getName(), "Valeur invalide : " + e.getValue()));
         return probleme(HttpStatus.BAD_REQUEST, Code.VALIDATION, resume(erreurs), req, erreurs);
+    }
+
+
+    @ExceptionHandler(NonAuthentifieException.class)
+    public ResponseEntity<ProblemDetail> nonAuthentifie(NonAuthentifieException e, HttpServletRequest req) {
+        var probleme = probleme(HttpStatus.UNAUTHORIZED, Code.NON_AUTHENTIFIE, e.getMessage(), req, null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .body(probleme);
     }
 
 

@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Execution(ExecutionMode.SAME_THREAD)
 class ConceptionApiConformiteTests extends ConformiteHttp {
 
-    private static final AtomicInteger PROCHAIN_TELEPHONE = new AtomicInteger(32_800_000);
+    private static final AtomicInteger PROCHAIN_NUMERO = new AtomicInteger(8_000_000);
 
     @Test
     @Tag("socle")
@@ -369,7 +369,7 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
     }
 
     private static String prochainTelephone() {
-        return "0" + PROCHAIN_TELEPHONE.getAndIncrement();
+        return "032" + PROCHAIN_NUMERO.getAndIncrement();
     }
 
     private HttpResponse<String> post(String chemin, Map<String, ?> donnees)

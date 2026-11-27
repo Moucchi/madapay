@@ -16,8 +16,11 @@ import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = "JWT_SECRET=" + ConformiteHttp.SECRET_JWT_TEST)
 abstract class ConformiteHttp {
+
+    static final String SECRET_JWT_TEST = "secret-reserve-aux-tests-madapay-tp3";
 
     static final JsonMapper JSON = JsonMapper.builder().build();
 

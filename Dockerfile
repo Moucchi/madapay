@@ -10,4 +10,4 @@ WORKDIR /app
 COPY --from=build /madapay.jar ./madapay.jar
 USER 10001:10001
 EXPOSE 8080
-ENTRYPOINT ["java", "-Duser.timezone=Indian/Antananarivo", "-jar", "/app/madapay.jar"]
+ENTRYPOINT ["sh", "-ec", "export JWT_SECRET=\"${JWT_SECRET:-$(head -c 32 /dev/urandom | base64)}\"; exec java -Duser.timezone=Indian/Antananarivo -jar /app/madapay.jar \"$@\"", "madapay"]

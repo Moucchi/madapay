@@ -30,6 +30,13 @@ public class InMemoryCompteRepository implements CompteRepository {
     }
 
     @Override
+    public Optional<Compte> findByTelephone(String telephone) {
+        return comptes.values().stream()
+                .filter(compte -> telephone.equals(compte.getTelephone()))
+                .findFirst();
+    }
+
+    @Override
     public boolean existsById(UUID id) {
         return comptes.containsKey(id);
     }
