@@ -14,6 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.UUID;
 import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,6 +74,24 @@ class CompteLectureConformiteTests {
         assertThat(compte.required("solde").isIntegralNumber()).isTrue();
         assertThat(compte.required("plafond_journalier").longValue()).isEqualTo(2_000_000L);
         compte.required("cree_le");
+    }
+
+    @Test
+    @Tag("extension")
+    void compteInconnuRenvoieUnProbleme404() throws Exception {
+        verifierProbleme(get("/comptes/" + UUID.randomUUID()), 404, "INTROUVABLE");
+    }
+
+    private static void verifierProbleme(HttpResponse<String> reponse, int statut, String code) {
+        var probleme = corps(reponse, statut);
+
+        assertThat(contentType(reponse)).startsWith("application/problem+json");
+        probleme.required("type");
+        probleme.required("title");
+        assertThat(probleme.required("status").intValue()).isEqualTo(statut);
+        if (code != null) {
+            assertThat(probleme.required("code").stringValue()).isEqualTo(code);
+        }
     }
 
     private static JsonNode compteDuJeuDeDonnees(String cle) {
