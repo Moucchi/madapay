@@ -67,6 +67,20 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(texte(corps(get(chemin), 200), "nom")).isEqualTo("Nouveau nom");
     }
 
+    @Test
+    @Tag("socle")
+    void supprimeUnBeneficiaire() throws Exception {
+        var beneficiaire = creerBeneficiaire("rasoa");
+        var chemin = beneficiaires("rasoa") + "/" + texte(beneficiaire, "id");
+
+        var reponse = envoyer(requete(chemin).DELETE());
+
+        assertThat(reponse.statusCode()).isEqualTo(204);
+        assertThat(reponse.body()).isEmpty();
+        verifierProbleme(get(chemin), 404, "INTROUVABLE");
+        verifierProbleme(envoyer(requete(chemin).DELETE()), 404, "INTROUVABLE");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
