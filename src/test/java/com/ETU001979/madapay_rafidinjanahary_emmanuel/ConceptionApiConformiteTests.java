@@ -321,6 +321,17 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
                 .contains("REMBOURSEMENT");
     }
 
+    @Test
+    @Tag("defi")
+    void refuseLaDoubleAnnulationEtLeTransfertInconnu() throws Exception {
+        var transfert = corps(creerTransfert("hery", 1000), 201);
+        var chemin = annulation(texte(transfert, "id"));
+
+        corps(postSansCorps(chemin), 200);
+        verifierProbleme(postSansCorps(chemin), 409, "TRANSFERT_NON_ANNULABLE");
+        verifierProbleme(postSansCorps(annulation(UUID.randomUUID().toString())), 404, "INTROUVABLE");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
@@ -411,5 +422,9 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
 
     private static String annulation(String id) {
         return "/transferts/" + id + "/annulation";
+    }
+
+    private HttpResponse<String> postSansCorps(String chemin) throws IOException, InterruptedException {
+        return envoyer(requete(chemin).POST(HttpRequest.BodyPublishers.noBody()));
     }
 }
