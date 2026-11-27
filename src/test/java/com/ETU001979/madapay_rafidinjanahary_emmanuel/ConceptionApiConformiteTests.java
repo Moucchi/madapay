@@ -122,6 +122,16 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         }
     }
 
+    @Test
+    @Tag("socle")
+    void doublonDeTelephoneRenvoie409() throws Exception {
+        var base = beneficiaires("rasoa");
+        var telephone = prochainTelephone();
+
+        corps(post(base, Map.of("nom", "Premier", "telephone", telephone)), 201);
+        verifierProbleme(post(base, Map.of("nom", "Second", "telephone", telephone)), 409, "CONFLIT");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
