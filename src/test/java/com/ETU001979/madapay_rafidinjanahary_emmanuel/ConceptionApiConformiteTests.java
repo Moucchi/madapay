@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
@@ -90,6 +92,15 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(reponse, 404, "INTROUVABLE");
     }
 
+    @ParameterizedTest
+    @Tag("socle")
+    @ValueSource(strings = {"0361234567", "032123456", "03212345678", "+261321234567", "abcdefghij", ""})
+    void telephoneInvalideRenvoie400AvecLeChamp(String telephone) throws Exception {
+        var reponse = post(beneficiaires("rasoa"), Map.of("nom", "Test", "telephone", telephone));
+
+        verifierChampsInvalides(reponse, "telephone");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
@@ -130,5 +141,12 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
             throws IOException, InterruptedException {
         return envoyer(requete(chemin).header("Content-Type", "application/merge-patch+json")
                 .method("PATCH", HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(donnees))));
+    }
+
+    private static void verifierChampsInvalides(HttpResponse<String> reponse, String... champs) {
+        var probleme = verifierProbleme(reponse, 400, "VALIDATION");
+        assertThat(probleme.required("erreurs"))
+                .extracting(erreur -> texte(erreur, "champ"))
+                .contains(champs);
     }
 }
