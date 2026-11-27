@@ -14,6 +14,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +43,18 @@ class CompteLectureConformiteTests {
         assertThat(page.required("taille").longValue()).isEqualTo(20L);
         assertThat(page.required("total").longValue()).isGreaterThanOrEqualTo(COMPTES.size());
         assertThat(page.required("elements").isArray()).isTrue();
+    }
+
+    @Test
+    @Tag("socle")
+    void listeContientLesComptesDuJeuDeDonnees() throws Exception {
+        var page = corps(get("/comptes?taille=100"), 200);
+
+        assertThat(page.required("elements"))
+                .extracting(compte -> compte.required("telephone").stringValue())
+                .containsAll(StreamSupport.stream(COMPTES.spliterator(), false)
+                        .map(compte -> compte.required("telephone").stringValue())
+                        .toList());
     }
 
     private static JsonNode lireComptes() {
