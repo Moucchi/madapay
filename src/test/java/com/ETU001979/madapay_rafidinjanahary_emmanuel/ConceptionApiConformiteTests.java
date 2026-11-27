@@ -299,6 +299,12 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(historique("hery", parametres), 400, "VALIDATION");
     }
 
+    @Test
+    @Tag("extension")
+    void historiqueCompteInconnuRenvoie404() throws Exception {
+        verifierProbleme(get("/comptes/" + UUID.randomUUID() + "/transactions"), 404, "INTROUVABLE");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
