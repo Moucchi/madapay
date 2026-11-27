@@ -81,6 +81,15 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(envoyer(requete(chemin).DELETE()), 404, "INTROUVABLE");
     }
 
+    @Test
+    @Tag("socle")
+    void creationSurUnCompteInconnuRenvoie404() throws Exception {
+        var reponse = post("/comptes/" + UUID.randomUUID() + "/beneficiaires",
+                Map.of("nom", "Test", "telephone", prochainTelephone()));
+
+        verifierProbleme(reponse, 404, "INTROUVABLE");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
