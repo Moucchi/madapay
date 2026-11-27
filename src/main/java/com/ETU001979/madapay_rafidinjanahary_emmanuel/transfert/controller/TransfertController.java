@@ -6,6 +6,7 @@ import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.AnnulationDe
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.TransfertCreationRequest;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.TransfertResponse;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.model.Transfert;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.service.CreationTransfertIdempotente;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.service.TransfertService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
@@ -29,10 +30,13 @@ import java.util.UUID;
 public class TransfertController {
 
     private final TransfertService transfertService;
+    private final CreationTransfertIdempotente creationIdempotente;
     private final DroitsCompte droits;
 
-    public TransfertController(TransfertService transfertService, DroitsCompte droits) {
+    public TransfertController(TransfertService transfertService, CreationTransfertIdempotente creationIdempotente,
+                               DroitsCompte droits) {
         this.transfertService = transfertService;
+        this.creationIdempotente = creationIdempotente;
         this.droits = droits;
     }
 
@@ -42,10 +46,15 @@ public class TransfertController {
             @RequestHeader(value = IdempotencyKey.EN_TETE, required = false) String cleIdempotence,
             @Valid @RequestBody TransfertCreationRequest corps) {
         droits.exigerTitulaireOuAdmin(jeton, corps.getCompteSourceId());
-        IdempotencyKey.exiger(cleIdempotence);
+        String cle = IdempotencyKey.exiger(cleIdempotence);
         corps.exigerAucunChampInconnu();
 
-        Transfert cree = transfertService.creer(corps);
+        var resultat = creationIdempotente.creer(cle, corps);
+        var cree = resultat.transfert();
+        if (resultat.rejoue()) {
+            return repondre(ResponseEntity.ok().header("Idempotency-Replayed", "true"), cree);
+        }
+
         URI location = ServletUriComponentsBuilder.fromCurrentRequestUri()
                 .path("/{id}")
                 .buildAndExpand(cree.getId())
