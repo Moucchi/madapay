@@ -100,6 +100,17 @@ class CompteLectureConformiteTests {
                 .containsExactly(hery.required("titulaire"));
     }
 
+    @Test
+    @Tag("defi")
+    void telephoneInconnuRenvoieUnePageVide() throws Exception {
+        var page = corps(get("/comptes?telephone=0329999999"), 200);
+
+        assertThat(page.required("total").longValue()).isZero();
+        var elements = page.required("elements");
+        assertThat(elements.isArray()).isTrue();
+        assertThat(elements).isEmpty();
+    }
+
     private static void verifierProbleme(HttpResponse<String> reponse, int statut, String code) {
         var probleme = corps(reponse, statut);
 
