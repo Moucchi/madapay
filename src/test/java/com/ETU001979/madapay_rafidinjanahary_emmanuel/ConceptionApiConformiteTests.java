@@ -188,6 +188,19 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(creerTransfert("hery", montant), 422, "MONTANT_TROP_FAIBLE");
     }
 
+    @ParameterizedTest
+    @Tag("extension")
+    @ValueSource(strings = {"0", "-500", "\"abc\"", "12.5", "null"})
+    void montantInvalideRenvoie400(String montantJson) throws Exception {
+        var beneficiaire = creerBeneficiaire("hery");
+        var donnees = JSON.createObjectNode()
+                .put("compte_source_id", compteId("hery"))
+                .put("beneficiaire_id", texte(beneficiaire, "id"));
+        donnees.set("montant", JSON.readTree(montantJson));
+
+        verifierProbleme(postTransfert(donnees), 400, "VALIDATION");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
