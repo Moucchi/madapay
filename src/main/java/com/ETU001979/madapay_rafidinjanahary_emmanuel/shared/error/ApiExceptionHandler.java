@@ -6,6 +6,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -79,6 +80,12 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
                 .body(probleme);
+    }
+
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail interdit(AccessDeniedException e, HttpServletRequest req) {
+        return probleme(HttpStatus.FORBIDDEN, Code.INTERDIT, e.getMessage(), req, null);
     }
 
 

@@ -32,6 +32,8 @@ abstract class ConformiteHttp {
     @LocalServerPort
     private int port;
 
+    private String jetonAdmin;
+
     static JsonNode verifierProbleme(HttpResponse<String> reponse, int statut, String code) {
         var probleme = corps(reponse, statut);
 
@@ -70,7 +72,30 @@ abstract class ConformiteHttp {
     }
 
     HttpResponse<String> envoyer(HttpRequest.Builder requete) throws IOException, InterruptedException {
+        var demande = requete.build();
+        if (!"/auth/token".equals(demande.uri().getPath())
+                && demande.headers().firstValue("Authorization").isEmpty()) {
+            if (jetonAdmin == null) {
+                jetonAdmin = jeton("admin");
+            }
+            requete.header("Authorization", "Bearer " + jetonAdmin);
+        }
+        return envoyerSansAuthentification(requete);
+    }
+
+    HttpResponse<String> envoyerSansAuthentification(HttpRequest.Builder requete)
+            throws IOException, InterruptedException {
         return CLIENT.send(requete.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    String jeton(String cle) throws IOException, InterruptedException {
+        var compte = compteDuJeuDeDonnees(cle);
+        var identifiants = JSON.createObjectNode()
+                .set("telephone", compte.required("telephone"))
+                .set("code_pin", compte.required("code_pin"));
+        var connexion = requete("/auth/token").header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(identifiants)));
+        return corps(envoyerSansAuthentification(connexion), 200).required("access_token").stringValue();
     }
 
     String compteId(String cle) throws IOException, InterruptedException {

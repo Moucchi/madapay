@@ -4,6 +4,12 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -12,11 +18,17 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Tag("tp3")
 class ConnexionConformiteTests extends ConformiteHttp {
+
+    @Autowired
+    private JwtEncoder encodeur;
 
     @ParameterizedTest
     @ValueSource(strings = {"rasoa", "agent", "admin"})
@@ -78,6 +90,62 @@ class ConnexionConformiteTests extends ConformiteHttp {
     @Test
     void refuseLeJsonMalForme() throws Exception {
         verifierProbleme(connexion("{"), 400, "VALIDATION");
+    }
+
+    @Test
+    void exigeUnJetonBearerSurLesRoutesProtegees() throws Exception {
+        var anonyme = envoyerSansAuthentification(requete("/comptes").GET());
+        verifierProbleme(anonyme, 401, "NON_AUTHENTIFIE");
+        assertThat(anonyme.headers().firstValue("WWW-Authenticate")).contains("Bearer");
+
+        for (var autorisation : List.of("Basic abcdef", "Bearer jeton.invalide.ici")) {
+            var demande = requete("/comptes").header("Authorization", autorisation).GET();
+            verifierProbleme(envoyerSansAuthentification(demande), 401, "NON_AUTHENTIFIE");
+        }
+    }
+
+    @Test
+    void refuseUnJetonExpireCorrectementSigne() throws Exception {
+        var maintenant = Instant.now();
+        var claims = JwtClaimsSet.builder()
+                .subject(compteId("admin"))
+                .claim("role", "ADMIN")
+                .issuedAt(maintenant.minusSeconds(3601))
+                .expiresAt(maintenant.minusSeconds(1))
+                .build();
+        var parametres = JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims);
+        var jetonExpire = encodeur.encode(parametres).getTokenValue();
+
+        var demande = requete("/comptes").header("Authorization", "Bearer " + jetonExpire).GET();
+        verifierProbleme(envoyerSansAuthentification(demande), 401, "NON_AUTHENTIFIE");
+    }
+
+    @Test
+    void seulLeTitulaireOuUnAdminPeutAnnulerLeTransfert() throws Exception {
+        var rasoa = compteId("rasoa");
+        var beneficiaire = corps(envoyer(requete("/comptes/" + rasoa + "/beneficiaires")
+                .header("Content-Type", "application/json").POST(json(Map.of(
+                        "nom", "Bénéficiaire annulation", "telephone", "0388999001")))), 201);
+        var transfert = corps(envoyer(requete("/transferts").header("Content-Type", "application/json")
+                .header("Idempotency-Key", UUID.randomUUID().toString()).POST(json(Map.of(
+                        "compte_source_id", rasoa, "beneficiaire_id", beneficiaire.required("id").stringValue(),
+                        "montant", 1000)))), 201);
+        var chemin = "/transferts/" + transfert.required("id").stringValue();
+
+        for (var cle : List.of("andry", "agent")) {
+            verifierProbleme(annuler(chemin, cle), 403, "INTERDIT");
+        }
+        assertThat(corps(get(chemin), 200).required("statut").stringValue()).isEqualTo("EN_ATTENTE");
+        assertThat(corps(annuler(chemin, "rasoa"), 200).required("statut").stringValue()).isEqualTo("ANNULEE");
+    }
+
+    private HttpResponse<String> annuler(String chemin, String cle) throws Exception {
+        return envoyer(requete(chemin + "/annulation").header("Authorization", "Bearer " + jeton(cle))
+                .POST(HttpRequest.BodyPublishers.noBody()));
+    }
+
+    private static HttpRequest.BodyPublisher json(Map<String, ?> donnees) {
+        return HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(donnees));
     }
 
     private HttpResponse<String> connexion(String identifiants) throws Exception {
