@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +46,12 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(corps(get(base + "/" + id), 200)).isEqualTo(beneficiaire);
         var page = corps(get(base + "?taille=100"), 200);
         assertThat(elementsPage(page)).extracting(element -> texte(element, "id")).contains(id);
+    }
+
+    @Test
+    @Tag("socle")
+    void beneficiaireInconnuRenvoie404() throws Exception {
+        verifierProbleme(get(beneficiaires("rasoa") + "/" + UUID.randomUUID()), 404, "INTROUVABLE");
     }
 
     private String beneficiaires(String cle) throws IOException, InterruptedException {
