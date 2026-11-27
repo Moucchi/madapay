@@ -15,7 +15,7 @@ public interface BeneficiaireService {
 
     Beneficiaire lire(UUID compteId, UUID beneficiaireId);
 
-    Beneficiaire modifier(UUID compteId, UUID beneficiaireId, Map<String, Object> patch);
+    Beneficiaire modifier(UUID compteId, UUID beneficiaireId, Map<String, Object> patch, String ifMatch);
 
     void supprimer(UUID compteId, UUID beneficiaireId);
 }

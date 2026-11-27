@@ -9,6 +9,7 @@ import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.pagination.PageResp
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.pagination.PageService;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.validation.Telephone;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,8 +49,9 @@ public class CompteController {
     }
 
     @GetMapping("/{compteId}")
-    public CompteResponse lire(@AuthenticationPrincipal Jwt jeton, @PathVariable UUID compteId) {
+    public ResponseEntity<CompteResponse> lire(@AuthenticationPrincipal Jwt jeton, @PathVariable UUID compteId) {
         droits.exigerLecture(jeton, compteId);
-        return CompteResponse.from(compteService.lire(compteId));
+        var compte = CompteResponse.from(compteService.lire(compteId));
+        return ResponseEntity.ok().eTag(compte.id() + "-" + compte.solde()).body(compte);
     }
 }

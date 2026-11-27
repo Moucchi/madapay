@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class Beneficiaire {
@@ -24,6 +24,11 @@ public class Beneficiaire {
     private String nom;
     private String telephone;
     private Instant creeLe;
+    private long revision;
+
+    public String version() {
+        return id + "-" + revision;
+    }
 
     public static boolean nomValide(Object valeur) {
         return valeur instanceof String s && !s.isBlank() && s.length() >= NOM_MIN && s.length() <= NOM_MAX;

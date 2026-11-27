@@ -5,7 +5,7 @@ import com.ETU001979.madapay_rafidinjanahary_emmanuel.compte.exception.SoldeInsu
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.compte.model.Compte;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.compte.service.CompteService;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.config.MadapayProperties;
-import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.error.VersionObsoleteException;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.validation.PreconditionVersion;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.dto.TransfertCreationRequest;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.exception.MontantTropFaibleException;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.exception.PlafondDepasseException;
@@ -14,7 +14,6 @@ import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.exception.Transf
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.model.Transfert;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.model.TransfertStatut;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.transfert.repository.TransfertRepository;
-import org.springframework.http.ETag;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -100,7 +99,7 @@ public class TransfertServiceImpl implements TransfertService {
             Transfert transfert = trouver(id);
             Instant maintenant = clock.instant();
             TransfertStatut statut = transfert.statutA(maintenant, regles.fenetreAnnulation());
-            verifierVersion(ifMatch, transfert.version(statut));
+            PreconditionVersion.verifierIfMatch(ifMatch, transfert.version(statut));
             if (statut != TransfertStatut.EN_ATTENTE) {
                 throw new TransfertNonAnnulableException(id, statut);
             }
@@ -112,16 +111,6 @@ public class TransfertServiceImpl implements TransfertService {
                     .build();
             compteService.crediter(compteId, transfert.getTotalDebite());
             return repository.save(annule);
-        }
-    }
-
-    private static void verifierVersion(String ifMatch, String version) {
-        if (ifMatch == null || "*".equals(ifMatch.trim())) {
-            return;
-        }
-        ETag courante = new ETag(version, false);
-        if (ETag.parse(ifMatch).stream().noneMatch(etag -> courante.compare(etag, true))) {
-            throw new VersionObsoleteException();
         }
     }
 
