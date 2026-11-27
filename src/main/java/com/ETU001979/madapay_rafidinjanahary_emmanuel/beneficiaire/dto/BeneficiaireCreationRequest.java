@@ -10,7 +10,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/** Corps de POST /comptes/{compteId}/beneficiaires (schéma BeneficiaireCreation). */
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)

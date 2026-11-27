@@ -9,10 +9,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Base des corps de requête stricts ({@code additionalProperties: false} du contrat) :
- * les champs inconnus sont collectés à la désérialisation puis refusés en 400.
- */
 public abstract class CorpsStrict {
 
     @JsonIgnore

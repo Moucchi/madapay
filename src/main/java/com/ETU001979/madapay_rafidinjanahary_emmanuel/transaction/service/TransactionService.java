@@ -71,7 +71,6 @@ public class TransactionService {
 
     private static TransactionResponse transaction(Transfert transfert, Type type, long montant,
                                                    TransfertStatut statut, Instant date) {
-        // L'identifiant reste stable lorsque la transaction est reconstruite à la lecture.
         String cle = transfert.getId() + ":" + type.name();
         UUID id = UUID.nameUUIDFromBytes(cle.getBytes(StandardCharsets.UTF_8));
         return new TransactionResponse(id, transfert.getCompteSourceId(), transfert.getId(),

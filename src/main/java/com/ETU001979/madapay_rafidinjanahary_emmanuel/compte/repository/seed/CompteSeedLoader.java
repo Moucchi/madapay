@@ -1,6 +1,7 @@
 package com.ETU001979.madapay_rafidinjanahary_emmanuel.compte.repository.seed;
 
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.compte.model.Compte;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -12,11 +13,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/** Charge le jeu de données initial ; les identifiants sont générés à chaque démarrage. */
 @Component
 public class CompteSeedLoader {
 
-    private static final String CHEMIN_SEED = "contrat/seed.json";
+    @Value("${madapay.seed}")
+    String CHEMIN_SEED;
 
     private final ObjectMapper mapper;
 

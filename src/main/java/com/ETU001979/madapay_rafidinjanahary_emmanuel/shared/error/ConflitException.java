@@ -1,6 +1,5 @@
 package com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.error;
 
-/** Conflit avec l'état courant d'une ressource : 409. */
 public abstract class ConflitException extends RuntimeException {
 
     private final Code code;

@@ -11,10 +11,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/**
- * Corps de POST /transferts (schéma TransfertCreation, additionalProperties: false).
- * Le minimum métier (100 Ar) n'est pas contrôlé ici : c'est une règle (422), pas une validation (400).
- */
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = false)

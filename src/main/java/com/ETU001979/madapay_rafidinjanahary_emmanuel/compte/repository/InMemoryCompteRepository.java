@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/** Comptes en mémoire, chargés depuis le seed au démarrage (ordre du fichier conservé). */
 @Repository
 public class InMemoryCompteRepository implements CompteRepository {
 
@@ -28,6 +27,13 @@ public class InMemoryCompteRepository implements CompteRepository {
     @Override
     public Optional<Compte> findById(UUID id) {
         return Optional.ofNullable(comptes.get(id));
+    }
+
+    @Override
+    public Optional<Compte> findByTelephone(String telephone) {
+        return comptes.values().stream()
+                .filter(compte -> telephone.equals(compte.getTelephone()))
+                .findFirst();
     }
 
     @Override

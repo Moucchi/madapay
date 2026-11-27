@@ -2,8 +2,11 @@ package com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.error;
 
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.config.MadapayProperties;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -20,11 +23,6 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Point unique de traduction des exceptions en réponses RFC 9457 (application/problem+json).
- * Les modules lèvent des exceptions typées (introuvable, conflit, règle métier, validation) :
- * ce gestionnaire n'a pas à connaître chaque cas métier (principe ouvert/fermé).
- */
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
@@ -34,7 +32,6 @@ public class ApiExceptionHandler {
         this.baseType = properties.baseType();
     }
 
-    // --- 400 VALIDATION ------------------------------------------------------------------
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail champsInvalides(MethodArgumentNotValidException e, HttpServletRequest req) {
@@ -57,7 +54,6 @@ public class ApiExceptionHandler {
         return probleme(HttpStatus.BAD_REQUEST, Code.VALIDATION, resume(erreurs), req, erreurs);
     }
 
-    /** Champ JSON en cause quand Jackson rejette une valeur (ex. montant = "abc" ou 12.5). */
     private static Optional<String> champFautif(Throwable e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
             if (t instanceof DatabindException de && !de.getPath().isEmpty()) {
@@ -67,7 +63,6 @@ public class ApiExceptionHandler {
         return Optional.empty();
     }
 
-    /** Identifiant de chemin mal formé : la ressource n'existe pas (404). Paramètre de requête : 400. */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ProblemDetail typeInvalide(MethodArgumentTypeMismatchException e, HttpServletRequest req) {
         if (e.getParameter().hasParameterAnnotation(PathVariable.class)) {
@@ -78,7 +73,21 @@ public class ApiExceptionHandler {
         return probleme(HttpStatus.BAD_REQUEST, Code.VALIDATION, resume(erreurs), req, erreurs);
     }
 
-    // --- 404 INTROUVABLE -----------------------------------------------------------------
+
+    @ExceptionHandler(NonAuthentifieException.class)
+    public ResponseEntity<ProblemDetail> nonAuthentifie(NonAuthentifieException e, HttpServletRequest req) {
+        var probleme = probleme(HttpStatus.UNAUTHORIZED, Code.NON_AUTHENTIFIE, e.getMessage(), req, null);
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .body(probleme);
+    }
+
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail interdit(AccessDeniedException e, HttpServletRequest req) {
+        return probleme(HttpStatus.FORBIDDEN, Code.INTERDIT, e.getMessage(), req, null);
+    }
+
 
     @ExceptionHandler(RessourceIntrouvableException.class)
     public ProblemDetail introuvable(RessourceIntrouvableException e, HttpServletRequest req) {
@@ -91,7 +100,6 @@ public class ApiExceptionHandler {
                 "La route " + req.getMethod() + " " + req.getRequestURI() + " n'existe pas.", req, null);
     }
 
-    // --- 405 / 415 -------------------------------------------------------------------------
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ProblemDetail methodeNonAutorisee(HttpRequestMethodNotSupportedException e, HttpServletRequest req) {
@@ -103,7 +111,6 @@ public class ApiExceptionHandler {
         return probleme(HttpStatus.UNSUPPORTED_MEDIA_TYPE, null, e.getMessage(), req, null);
     }
 
-    // --- 409 / 412 / 422 ---------------------------------------------------------------------
 
     @ExceptionHandler(ConflitException.class)
     public ProblemDetail conflit(ConflitException e, HttpServletRequest req) {
@@ -120,7 +127,15 @@ public class ApiExceptionHandler {
         return probleme(HttpStatus.valueOf(422), e.getCode(), e.getMessage(), req, null);
     }
 
-    // --- construction ------------------------------------------------------------------------
+
+    @ExceptionHandler(LimiteDebitException.class)
+    public ResponseEntity<ProblemDetail> limiteDebit(LimiteDebitException e, HttpServletRequest req) {
+        var statut = HttpStatus.TOO_MANY_REQUESTS;
+        return ResponseEntity.status(statut)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(e.delaiSecondes()))
+                .body(probleme(statut, Code.LIMITE_DEBIT, e.getMessage(), req, null));
+    }
+
 
     private Probleme probleme(HttpStatus statut, Code code, String detail,
                               HttpServletRequest req, List<Erreur> erreurs) {

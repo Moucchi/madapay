@@ -2,7 +2,6 @@ package com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.validation;
 
 import java.util.regex.Pattern;
 
-/** Règle du contrat sur les numéros : 10 chiffres, préfixes 032, 033, 034 ou 038. */
 public final class Telephone {
 
     public static final String REGEX = "^03[2348][0-9]{7}$";

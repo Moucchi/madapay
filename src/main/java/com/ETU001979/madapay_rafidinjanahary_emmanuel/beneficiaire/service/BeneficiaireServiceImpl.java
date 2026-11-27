@@ -6,6 +6,7 @@ import com.ETU001979.madapay_rafidinjanahary_emmanuel.beneficiaire.exception.Ben
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.beneficiaire.model.Beneficiaire;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.beneficiaire.repository.BeneficiaireRepository;
 import com.ETU001979.madapay_rafidinjanahary_emmanuel.compte.service.CompteService;
+import com.ETU001979.madapay_rafidinjanahary_emmanuel.shared.validation.PreconditionVersion;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -59,23 +60,26 @@ public class BeneficiaireServiceImpl implements BeneficiaireService {
     }
 
     @Override
-    public synchronized Beneficiaire modifier(UUID compteId, UUID beneficiaireId, Map<String, Object> patch) {
+    public synchronized Beneficiaire modifier(UUID compteId, UUID beneficiaireId, Map<String, Object> patch,
+                                             String ifMatch) {
         Beneficiaire beneficiaire = lire(compteId, beneficiaireId);
+        PreconditionVersion.verifierIfMatch(ifMatch, beneficiaire.version());
         patchValidator.valider(patch);
 
+        var modifie = beneficiaire.toBuilder().revision(beneficiaire.getRevision() + 1);
         if (patch.containsKey(TELEPHONE)) {
             String telephone = (String) patch.get(TELEPHONE);
             verifierPasDeDoublon(compteId, telephone, beneficiaireId);
-            beneficiaire.setTelephone(telephone);
+            modifie.telephone(telephone);
         }
         if (patch.containsKey(NOM)) {
-            beneficiaire.setNom((String) patch.get(NOM));
+            modifie.nom((String) patch.get(NOM));
         }
-        return repository.save(beneficiaire);
+        return repository.save(modifie.build());
     }
 
     @Override
-    public void supprimer(UUID compteId, UUID beneficiaireId) {
+    public synchronized void supprimer(UUID compteId, UUID beneficiaireId) {
         compteService.verifierExistence(compteId);
         if (!repository.delete(compteId, beneficiaireId)) {
             throw new BeneficiaireIntrouvableException(beneficiaireId);

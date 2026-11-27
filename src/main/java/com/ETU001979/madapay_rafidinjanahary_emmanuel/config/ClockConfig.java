@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.time.Clock;
 
-/** Horloge injectable : rend testables les règles dépendant du temps (plafond du jour, fenêtre d'annulation). */
 @Configuration
 public class ClockConfig {
 

@@ -6,10 +6,6 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/**
- * Règle des frais (contrat) : 0 Ar jusqu'au seuil, sinon pourcentage du montant
- * arrondi à l'Ar supérieur, avec un minimum. Calcul en BigDecimal (pas d'erreur d'arrondi flottant).
- */
 @Component
 public class FraisCalculator {
 

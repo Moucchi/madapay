@@ -12,7 +12,6 @@ public interface BeneficiaireRepository {
 
     Optional<Beneficiaire> findById(UUID compteId, UUID beneficiaireId);
 
-    /** Vrai si un autre bénéficiaire du compte (hors {@code idExclu}) porte ce numéro. */
     boolean existsByTelephone(UUID compteId, String telephone, UUID idExclu);
 
     Beneficiaire save(Beneficiaire beneficiaire);
