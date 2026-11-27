@@ -132,6 +132,22 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(post(base, Map.of("nom", "Second", "telephone", telephone)), 409, "CONFLIT");
     }
 
+    @Test
+    @Tag("extension")
+    void transfertDebiteLeMontantEtLesFrais() throws Exception {
+        var avant = solde("rasoa");
+        var reponse = creerTransfert("rasoa", 5000);
+        var transfert = corps(reponse, 201);
+
+        assertThat(montant(transfert, "montant")).isEqualTo(5000);
+        assertThat(montant(transfert, "frais")).isEqualTo(75);
+        assertThat(montant(transfert, "total_debite")).isEqualTo(5075);
+        assertThat(texte(transfert, "statut")).isEqualTo("EN_ATTENTE");
+        assertThat(texte(transfert, "compte_source_id")).isEqualTo(compteId("rasoa"));
+        verifierLocation(reponse, "/transferts/" + texte(transfert, "id"));
+        assertThat(avant - solde("rasoa")).isEqualTo(5075);
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
@@ -179,5 +195,31 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(probleme.required("erreurs"))
                 .extracting(erreur -> texte(erreur, "champ"))
                 .contains(champs);
+    }
+
+    private long solde(String cle) throws IOException, InterruptedException {
+        return montant(corps(get("/comptes/" + compteId(cle)), 200), "solde");
+    }
+
+    private HttpResponse<String> creerTransfert(String cle, int montant)
+            throws IOException, InterruptedException {
+        var beneficiaire = creerBeneficiaire(cle);
+        return postTransfert(JSON.createObjectNode()
+                .put("compte_source_id", compteId(cle))
+                .put("beneficiaire_id", texte(beneficiaire, "id"))
+                .put("montant", montant)
+                .put("motif", "Test"));
+    }
+
+    private HttpResponse<String> postTransfert(JsonNode donnees) throws IOException, InterruptedException {
+        return envoyer(requete("/transferts").header("Content-Type", "application/json")
+                .header("Idempotency-Key", UUID.randomUUID().toString())
+                .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(donnees))));
+    }
+
+    private static long montant(JsonNode noeud, String champ) {
+        var valeur = noeud.required(champ);
+        assertThat(valeur.isIntegralNumber()).as("Champ entier %s", champ).isTrue();
+        return valeur.longValue();
     }
 }
