@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.JsonNode;
 
@@ -146,6 +147,16 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(texte(transfert, "compte_source_id")).isEqualTo(compteId("rasoa"));
         verifierLocation(reponse, "/transferts/" + texte(transfert, "id"));
         assertThat(avant - solde("rasoa")).isEqualTo(5075);
+    }
+
+    @ParameterizedTest
+    @Tag("extension")
+    @CsvSource({"100, 0", "1000, 0", "1001, 50", "2000, 50", "10000, 150", "33333, 500", "100000, 1500"})
+    void calculeLesFraisParPalier(int montant, int frais) throws Exception {
+        var transfert = corps(creerTransfert("hery", montant), 201);
+
+        assertThat(montant(transfert, "frais")).as("Frais pour %s Ar", montant).isEqualTo(frais);
+        assertThat(montant(transfert, "total_debite")).isEqualTo(montant + frais);
     }
 
     private String beneficiaires(String cle) throws IOException, InterruptedException {
