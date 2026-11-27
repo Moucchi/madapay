@@ -111,6 +111,26 @@ class CompteLectureConformiteTests {
         assertThat(elements).isEmpty();
     }
 
+    @Test
+    @Tag("defi")
+    void pagineParPageEtTaille() throws Exception {
+        var premiere = corps(get("/comptes?page=1&taille=2"), 200);
+        var deuxieme = corps(get("/comptes?page=2&taille=2"), 200);
+
+        assertThat(premiere.required("taille").intValue()).isEqualTo(2);
+        assertThat(deuxieme.required("page").intValue()).isEqualTo(2);
+        assertThat(premiere.required("total").longValue()).isGreaterThanOrEqualTo(COMPTES.size());
+        var premiersComptes = premiere.required("elements");
+        var comptesSuivants = deuxieme.required("elements");
+        assertThat(premiersComptes).hasSize(2);
+        assertThat(comptesSuivants).hasSize(2);
+        assertThat(premiersComptes)
+                .extracting(compte -> compte.required("id"))
+                .doesNotContainAnyElementsOf(StreamSupport.stream(comptesSuivants.spliterator(), false)
+                        .map(compte -> compte.required("id"))
+                        .toList());
+    }
+
     private static void verifierProbleme(HttpResponse<String> reponse, int statut, String code) {
         var probleme = corps(reponse, statut);
 
