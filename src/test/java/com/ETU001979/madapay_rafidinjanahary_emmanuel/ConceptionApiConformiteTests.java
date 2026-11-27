@@ -101,6 +101,15 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierChampsInvalides(reponse, "telephone");
     }
 
+    @Test
+    @Tag("socle")
+    void refuseLeNomTropCourtEtLesChampsManquants() throws Exception {
+        var base = beneficiaires("rasoa");
+
+        verifierChampsInvalides(post(base, Map.of("nom", "A", "telephone", prochainTelephone())), "nom");
+        verifierChampsInvalides(post(base, Map.of()), "nom", "telephone");
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
