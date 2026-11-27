@@ -277,6 +277,21 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         assertThat(montant(corps(historique("hery", "du=2100-01-01"), 200), "total")).isZero();
     }
 
+    @Test
+    @Tag("extension")
+    void historiqueTrieParMontant() throws Exception {
+        for (int montant : List.of(1500, 700, 9000)) {
+            corps(creerTransfert("hery", montant), 201);
+        }
+
+        assertThat(elementsPage(corps(historique("hery", "tri=montant&taille=100"), 200)))
+                .extracting(transaction -> montant(transaction, "montant"))
+                .isSorted();
+        assertThat(elementsPage(corps(historique("hery", "tri=-montant&taille=100"), 200)))
+                .extracting(transaction -> montant(transaction, "montant"))
+                .isSortedAccordingTo(Comparator.reverseOrder());
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
