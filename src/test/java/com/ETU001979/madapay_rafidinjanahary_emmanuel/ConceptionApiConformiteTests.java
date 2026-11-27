@@ -172,6 +172,15 @@ class ConceptionApiConformiteTests extends ConformiteHttp {
         verifierProbleme(get("/transferts/" + UUID.randomUUID()), 404, "INTROUVABLE");
     }
 
+    @Test
+    @Tag("extension")
+    void soldeInsuffisantRenvoie422SansDebiter() throws Exception {
+        var avant = solde("miora");
+
+        verifierProbleme(creerTransfert("miora", 4990), 422, "SOLDE_INSUFFISANT");
+        assertThat(solde("miora")).isEqualTo(avant);
+    }
+
     private String beneficiaires(String cle) throws IOException, InterruptedException {
         return "/comptes/" + compteId(cle) + "/beneficiaires";
     }
